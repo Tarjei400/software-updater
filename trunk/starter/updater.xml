@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<root>
+    <version>1.0.2</version>
+    <patches>
+        <patch>
+            <path>path</path>
+            <encryption>
+                <type>AES</type>
+                <key>key</key>
+                <IV>IV</IV>
+            </encryption>
+        </patch>
+        <patch>
+            <path>path2</path>
+        </patch>
+    </patches>
+</root>
