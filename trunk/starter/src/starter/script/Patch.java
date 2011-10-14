@@ -184,7 +184,7 @@ public class Patch {
 
             return writer.toString();
         } catch (Exception ex) {
-            Logger.getLogger(Catalog.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         return "";

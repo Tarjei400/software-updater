@@ -27,8 +27,7 @@ import java.util.zip.CheckedInputStream;
 import javax.crypto.NoSuchPaddingException;
 import javax.swing.JOptionPane;
 
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
+import org.apache.commons.codec.binary.Base64;
 
 /**
  * This class holds helper utility methods for objects implementing the
@@ -38,10 +37,6 @@ import sun.misc.BASE64Encoder;
  */
 public class AES_Utilities
 {
-    private static BASE64Decoder base64Decoder = new BASE64Decoder();
-
-    private static BASE64Encoder base64Encoder = new BASE64Encoder();
-
     /**
      * Get an array containing the bytes represented by the given Base64 text.
      * @param base64Text the Base64 representation of the bytes to be obtained.
@@ -53,7 +48,7 @@ public class AES_Utilities
     public static byte[] getBytesFromBase64(String base64Text)
                                                               throws IOException
     {
-        return base64Decoder.decodeBuffer(base64Text);
+        return Base64.decodeBase64(base64Text);
     } // public static byte[] getBytesFromBase64(String base64Text)
 
     /**
@@ -64,7 +59,7 @@ public class AES_Utilities
      */
     public static String getBase64Text(byte[] bytes)
     {
-        return base64Encoder.encode(bytes);
+        return Base64.encodeBase64URLSafeString(bytes);
     }
 
     /**

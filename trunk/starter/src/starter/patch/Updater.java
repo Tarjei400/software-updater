@@ -1,5 +1,7 @@
-package starter.updater;
+package starter.patch;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -8,9 +10,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import starter.gui.UpdaterWindow;
 import starter.script.Client;
 import starter.script.Client.Patch;
-import starter.updater.PatchActionLogReader.UnfinishedPatch;
+import starter.patch.PatchLogReader.UnfinishedPatch;
 import starter.util.Util;
 
 /**
@@ -21,7 +26,7 @@ public class Updater {
     private Updater() {
     }
 
-    public static boolean update(File clientScriptFile, Client clientScript, File tempDir) {
+    public static boolean update(File clientScriptFile, Client clientScript, File tempDir, String windowTitle, String windowIcon, String title, String icon) {
         boolean returnResult = true;
 
         List<Patch> patches = clientScript.getPatches();
@@ -33,55 +38,87 @@ public class Updater {
         File logFile = new File(tempDir + "/action.log");
 
         // read log history
-        PatchActionLogReader patchActionLogReader = null;
+        PatchLogReader patchActionLogReader = null;
         try {
-            boolean rewriteClientXML = false;
+            patchActionLogReader = new PatchLogReader(logFile);
+        } catch (Exception ex) {
+        }
+        if (patchActionLogReader != null) {
+            try {
+                boolean rewriteClientXML = false;
 
-            patchActionLogReader = new PatchActionLogReader(logFile);
-            List<String> finishedPatches = patchActionLogReader.getfinishedPatches();
-            for (String finishedPatch : finishedPatches) {
-                Iterator<Patch> iterator = patches.iterator();
-                while (iterator.hasNext()) {
-                    Patch _patch = iterator.next();
-                    if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
-                        rewriteClientXML = true;
-                        iterator.remove();
+                List<String> finishedPatches = patchActionLogReader.getfinishedPatches();
+                for (String finishedPatch : finishedPatches) {
+                    Iterator<Patch> iterator = patches.iterator();
+                    while (iterator.hasNext()) {
+                        Patch _patch = iterator.next();
+                        if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
+                            rewriteClientXML = true;
+                            iterator.remove();
+                        }
                     }
                 }
-            }
 
-            if (rewriteClientXML) {
-                clientScript.setPatches(patches);
-                if (!saveClientScript(clientScriptFile, clientScript, tempDir)) {
-                    return false;
+                if (rewriteClientXML) {
+                    clientScript.setPatches(patches);
+                    if (!saveClientScript(clientScriptFile, clientScript, tempDir)) {
+                        return false;
+                    }
                 }
-            }
 
-            if (patches.isEmpty()) {
-                return true;
+                if (patches.isEmpty()) {
+                    return true;
+                }
+            } catch (Exception ex) {
+                return false;
             }
-        } catch (Exception ex) {
-            return false;
         }
 
+        // frame
+        final Thread currentThread = Thread.currentThread();
+        final UpdaterWindow updaterGUI = new UpdaterWindow(windowTitle, windowIcon, title, icon);
+        updaterGUI.addListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updaterGUI.setEnableCancel(false);
+                currentThread.interrupt();
+            }
+        });
+        updaterGUI.setProgress(0);
+        updaterGUI.setMessage("Preparing ...");
+        JFrame updaterFrame = updaterGUI.getGUI();
+        updaterFrame.setVisible(true);
+
         // patch
+        boolean canLaunchSoftware = true;
         FileOutputStream lockFileOut = null;
         FileLock lock = null;
-        PatchActionLogWriter patchActionLogWriter = null;
+        PatchLogWriter patchActionLogWriter = null;
         try {
+            updaterGUI.setProgress(1);
+            updaterGUI.setMessage("Check to see if there is another updater running ...");
+
             // acquire lock
-            lockFileOut = new FileOutputStream("update.lck");
+            lockFileOut = new FileOutputStream(tempDir + "/update.lck");
             lock = lockFileOut.getChannel().tryLock();
             if (lock == null) {
                 throw new Exception();
             }
 
+            updaterGUI.setProgress(2);
+            updaterGUI.setMessage("Clear log ...");
+
             // truncate log file
             new FileOutputStream(logFile).close();
             // open log file
-            patchActionLogWriter = new PatchActionLogWriter(logFile);
+            patchActionLogWriter = new PatchLogWriter(logFile);
+
+            updaterGUI.setProgress(3);
+            updaterGUI.setMessage("Starting ...");
 
             // iterate patches and do patch
+            final float stepSize = 97F / (float) patches.size();
             int count = -1;
             Iterator<Patch> iterator = patches.iterator();
             while (iterator.hasNext()) {
@@ -95,15 +132,24 @@ public class Updater {
                 File tempDirForPatch = new File(tempDir.getAbsolutePath() + "/" + count);
 
                 // initialize patcher
+                final int _count = count;
                 final Patcher _patcher = new Patcher(new PatcherListener() {
 
                     @Override
                     public void patchProgress(int percentage, String message) {
-                        // update progress
+                        float base = 3F + (stepSize * (float) _count);
+                        float addition = ((float) percentage / 100F) * stepSize;
+                        updaterGUI.setProgress((int) (base + addition));
+                        updaterGUI.setMessage(message);
                     }
 
                     @Override
                     public void patchFinished(boolean succeed) {
+                    }
+
+                    @Override
+                    public void patchEnableCancel(boolean enable) {
+                        updaterGUI.setEnableCancel(enable);
                     }
                 }, patchActionLogWriter, new File(_patch.getPath()), tempDirForPatch);
 
@@ -134,8 +180,22 @@ public class Updater {
             }
         } catch (Exception ex) {
             returnResult = false;
+
+            JOptionPane.showMessageDialog(updaterFrame, "An error occurred when updating the software.");
+            if (updaterGUI.isCancelEnabled()) {
+                Object[] options = {"Launch", "Exit"};
+                int result = JOptionPane.showOptionDialog(null, "Continue to launch the software?", "Continue action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                if (result == 0) {
+                    returnResult = true;
+                }
+            } else {
+                JOptionPane.showMessageDialog(updaterFrame, "You can restart the software to try to update files again.");
+            }
+
             Logger.getLogger(Updater.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
+            updaterFrame.setVisible(false);
+            updaterFrame.dispose();
             try {
                 if (lock != null) {
                     lock.release();

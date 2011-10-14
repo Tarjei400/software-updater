@@ -27,10 +27,14 @@ import org.w3c.dom.NodeList;
 public class Client {
 
     protected String version;
+    protected long lastUpdated;
+    protected String publicKey;
     protected List<Patch> patches;
 
-    public Client(String version, List<Patch> patches) {
+    public Client(String version, long lastUpdated, String publicKey, List<Patch> patches) {
         this.version = version;
+        this.lastUpdated = lastUpdated;
+        this.publicKey = publicKey;
         this.patches = new ArrayList<Patch>(patches);
     }
 
@@ -40,6 +44,22 @@ public class Client {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public long getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void setLastUpdated(long lastUpdated) {
+        this.lastUpdated = lastUpdated;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
     }
 
     public List<Patch> getPatches() {
@@ -68,6 +88,22 @@ public class Client {
             String _version = _versionElement.getTextContent();
 
 
+            Long _lastUpdated = -1L;
+            NodeList _lastUpdatedNodeList = _rootNode.getElementsByTagName("last-updated");
+            if (_lastUpdatedNodeList.getLength() != 0) {
+                Element _lastUpdatedElement = (Element) _lastUpdatedNodeList.item(0);
+                _lastUpdated = Long.parseLong(_lastUpdatedElement.getTextContent());
+            }
+
+
+            String _publicKey = null;
+            NodeList _publicKeyNodeList = _rootNode.getElementsByTagName("public-key");
+            if (_publicKeyNodeList.getLength() != 0) {
+                Element _publicKeyElement = (Element) _publicKeyNodeList.item(0);
+                _publicKey = _publicKeyElement.getTextContent();
+            }
+
+
             NodeList _patchesNodeList = _rootNode.getElementsByTagName("patches");
             if (_patchesNodeList.getLength() == 0) {
                 return null;
@@ -85,9 +121,9 @@ public class Client {
                 }
             }
 
-            return new Client(_version, _patches);
+            return new Client(_version, _lastUpdated, _publicKey, _patches);
         } catch (Exception ex) {
-            Logger.getLogger(Catalog.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -132,7 +168,7 @@ public class Client {
 
             return writer.toString();
         } catch (Exception ex) {
-            Logger.getLogger(Catalog.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         return "";

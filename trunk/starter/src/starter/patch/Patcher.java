@@ -1,4 +1,4 @@
-package starter.updater;
+package starter.patch;
 
 import com.nothome.delta.GDiffPatcher;
 import java.io.BufferedInputStream;
@@ -29,13 +29,13 @@ import starter.util.Util;
 public class Patcher {
 
     private PatcherListener listener;
-    private PatchActionLogWriter log;
+    private PatchLogWriter log;
     private File patchFile;
     private File tempDir;
     private byte[] buf;
     private float progress;
 
-    public Patcher(PatcherListener listener, PatchActionLogWriter log, File patchFile, File tempDir) throws IOException {
+    public Patcher(PatcherListener listener, PatchLogWriter log, File patchFile, File tempDir) throws IOException {
         this.listener = listener;
         this.log = log;
 
@@ -61,7 +61,8 @@ public class Patcher {
         Patch patch = null;
         try {
             progress = 0;
-            listener.patchProgress((int) progress, "Preparing ...");
+            listener.patchProgress((int) progress, "Preparing new patch ...");
+            listener.patchEnableCancel(false);
 
             patchIn = new BufferedInputStream(new FileInputStream(patchFile));
 
@@ -107,6 +108,7 @@ public class Patcher {
 
             progress = 5;
             listener.patchProgress((int) progress, "Updating ...");
+            listener.patchEnableCancel(true);
 
             // start patch - patch files and store to temporary directory first
             List<Operation> operations = patch.getOperations();
@@ -145,6 +147,7 @@ public class Patcher {
 
             progress = 96;
             listener.patchProgress((int) progress, "Replacing old files with new files ...");
+            listener.patchEnableCancel(false);
 
             // all files patched to temporary directory, replace old files with the new one
             progressStep = 4.0F / (float) operations.size();
@@ -152,7 +155,7 @@ public class Patcher {
             for (int i = startFromFileIndex, iEnd = operations.size(); i < iEnd; i++) {
                 Operation _operation = operations.get(i);
 
-                log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchActionLogWriter.PatchAction.START, _operation.getOldFilePath(), _operation.getNewFilePath());
+                log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchLogWriter.PatchAction.START, _operation.getOldFilePath(), _operation.getNewFilePath());
 
                 if (_operation.getType().equals("remove")) {
                     listener.patchProgress((int) progress, "Removing " + _operation.getOldFilePath() + " ...");
@@ -168,8 +171,10 @@ public class Patcher {
                     new File(tempDir + "/" + i).renameTo(new File(_operation.getNewFilePath()));
                 }
 
+                listener.patchEnableCancel(true);
 
-                log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchActionLogWriter.PatchAction.FINISH, _operation.getOldFilePath(), _operation.getNewFilePath());
+
+                log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchLogWriter.PatchAction.FINISH, _operation.getOldFilePath(), _operation.getNewFilePath());
                 progress += progressStep;
             }
 
@@ -244,7 +249,7 @@ public class Patcher {
                         }
                     };
                     ((InterruptibleOutputStream) tempNewFileOut).addInterruptedTask(interruptedTask);
-                    ((InterruptibleInputStream) interruptiblePatchIn).addInterruptedTask(interruptedTask);
+                    interruptiblePatchIn.addInterruptedTask(interruptedTask);
                     seekableRandomAccessOldFile.addInterruptedTask(interruptedTask);
 
                     diffPatcher.patch(seekableRandomAccessOldFile, interruptiblePatchIn, tempNewFileOut);
@@ -262,7 +267,7 @@ public class Patcher {
                         }
                     };
                     ((InterruptibleOutputStream) tempNewFileOut).addInterruptedTask(interruptedTask);
-                    ((InterruptibleInputStream) interruptiblePatchIn).addInterruptedTask(interruptedTask);
+                    interruptiblePatchIn.addInterruptedTask(interruptedTask);
 
                     // replace or new
                     int byteRead, remaining = operation.getPatchLength();

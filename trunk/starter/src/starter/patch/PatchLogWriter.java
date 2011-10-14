@@ -1,4 +1,4 @@
-package starter.updater;
+package starter.patch;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,7 +13,7 @@ import java.io.IOException;
  * <p><b>Note that '[' and ']' didn't really exist.</b></p>
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
-public class PatchActionLogWriter {
+public class PatchLogWriter {
 
     public static enum PatchAction {
 
@@ -21,7 +21,7 @@ public class PatchActionLogWriter {
     }
     private FileOutputStream out;
 
-    public PatchActionLogWriter(File file) throws IOException {
+    public PatchLogWriter(File file) throws IOException {
         out = new FileOutputStream(file, true);
     }
 

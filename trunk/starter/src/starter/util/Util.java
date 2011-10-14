@@ -9,6 +9,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.UIManager;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -73,17 +74,15 @@ public class Util {
         return returnResult;
     }
 
-    public static long compareVersion(String version1, String version2) {
-        String[] version1Parted = version1.split("\\.");
-        String[] version2Parted = version2.split("\\.");
-
-        long returnValue = 0;
-
-        for (int i = 0, iEnd = Math.min(version1Parted.length, version2Parted.length); i < iEnd; i++) {
-            returnValue += (Integer.parseInt(version1Parted[i]) - Integer.parseInt(version2Parted[i])) * Math.pow(10000, iEnd - i);
+    /**
+     * Set UI look & feel to system look & feel.
+     */
+    public static void setLookAndFeel() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ex) {
+            Logger.getLogger(Util.class.getName()).log(Level.INFO, "Failed to set system look and feel.", ex);
         }
-
-        return returnValue;
     }
 
     public static byte[] readFile(File file) {
@@ -94,7 +93,7 @@ public class Util {
             fin = new FileInputStream(file);
 
             int byteRead = 0, cumulateByteRead = 0;
-            while ((byteRead = fin.read(content, cumulateByteRead, content.length - cumulateByteRead)) != -1) {
+            while ((byteRead = fin.read(content, cumulateByteRead, content.length - cumulateByteRead)) > 0) {
                 cumulateByteRead += byteRead;
             }
 

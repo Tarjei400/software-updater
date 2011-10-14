@@ -1,4 +1,4 @@
-package starter.updater;
+package starter.patch;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,12 +20,12 @@ import java.util.List;
  * <p><b>Note that '[' and ']' didn't really exist.</b></p>
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
-public class PatchActionLogReader {
+public class PatchLogReader {
 
     private List<String> finishedPatches;
     private UnfinishedPatch unfinishedPatch;
 
-    public PatchActionLogReader(File file) throws IOException {
+    public PatchLogReader(File file) throws IOException {
         finishedPatches = new ArrayList<String>();
 
         int lastUnfinishedFileIndex = -1;
