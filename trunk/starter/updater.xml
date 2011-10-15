@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <root>
     <version>1.0.2</version>
+    <catalog-url>catalog_url</catalog-url>
+    <jar-path>LanguageFilesTool.jar</jar-path>
+    <main-class>langfiles.Main</main-class>
+    <storage-path>update/</storage-path>
+    <information>
+        <software-name>Language Files Tool</software-name>
+        <software-icon>
+            <location>jar</location>
+            <path>/starter/logo.png</path>
+        </software-icon>
+        <updater-title>Update Software</updater-title>
+        <updater-icon>
+            <location>jar</location>
+            <path>/starter/gui/images/UpdaterWindow/titleIcon.png</path>
+        </updater-icon>
+    </information>
     <patches>
         <patch>
             <path>path</path>

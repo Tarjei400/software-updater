@@ -18,6 +18,7 @@ public class SeekableFile implements SeekableSource {
     protected final List<Runnable> interruptedTasks;
 
     public SeekableFile(RandomAccessFile file) {
+        b = new byte[1024];
         this.file = file;
         interruptedTasks = Collections.synchronizedList(new ArrayList<Runnable>());
     }
@@ -47,7 +48,7 @@ public class SeekableFile implements SeekableSource {
                 byteToRead = b.length;
             }
 
-            if ((byteRead = file.read(b, 0, byteToRead)) != -1) {
+            if ((byteRead = file.read(b, 0, byteToRead)) > 0) {
                 bb.put(b, 0, byteRead);
                 cumulatedByteRead += byteRead;
             } else {

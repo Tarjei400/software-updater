@@ -6,20 +6,20 @@ import java.io.IOException;
 
 /**
  * Sample (separated by tab):<br />
- * [patchPath]	1.0.0 to 1.0.1	start<br />
- * [patchPath]	1.0.0 to 1.0.1	patch	0	start	[oldFilePath] -> [newFilePath]<br />
- * [patchPath]	1.0.0 to 1.0.1	patch	0	finish	[oldFilePath] -> [newFilePath]<br />
- * [patchPath]	1.0.0 to 1.0.1	finish
+ * [patchFullPath]	1.0.0 to 1.0.1	start<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	patch	0	start	[oldFilePath] -> [newFilePath]<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	patch	0	finish	[oldFilePath] -> [newFilePath]<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	finish
  * <p><b>Note that '[' and ']' didn't really exist.</b></p>
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
 public class PatchLogWriter {
 
-    public static enum PatchAction {
+    public static enum Action {
 
         START, FINISH
     }
-    private FileOutputStream out;
+    protected FileOutputStream out;
 
     public PatchLogWriter(File file) throws IOException {
         out = new FileOutputStream(file, true);
@@ -57,8 +57,8 @@ public class PatchLogWriter {
         out.flush();
     }
 
-    public void logPatch(String patchPath, String fromVersion, String toVersion, int fileIndex, PatchAction action, String oldFilePath, String newFilePath) throws IOException {
-        String fileIndexString = Integer.toString(fileIndex), actionString = action == PatchAction.START ? "start" : "finish";
+    public void logPatch(String patchPath, String fromVersion, String toVersion, int fileIndex, Action action, String oldFilePath, String newFilePath) throws IOException {
+        String fileIndexString = Integer.toString(fileIndex), actionString = action == Action.START ? "start" : "finish";
 
         StringBuilder sb = new StringBuilder(patchPath.length() + 1 + fromVersion.length() + 4 + toVersion.length() + (1 + 5 + 1)
                 + fileIndexString.length() + 1 + actionString.length() + 1 + oldFilePath.length() + 4 + newFilePath.length() + 1);

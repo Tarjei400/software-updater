@@ -41,7 +41,7 @@ public class InterruptibleInputStream extends FilterInputStream {
     public int read() throws IOException {
         checkInterrupted();
 
-        if (sizeAvailable == 0) {
+        if (sizeAvailable <= 0) {
             return -1;
         }
 
@@ -61,7 +61,7 @@ public class InterruptibleInputStream extends FilterInputStream {
     public int read(byte b[], int off, int len) throws IOException {
         checkInterrupted();
 
-        if (sizeAvailable == 0) {
+        if (sizeAvailable <= 0) {
             return -1;
         }
 
@@ -71,8 +71,11 @@ public class InterruptibleInputStream extends FilterInputStream {
 
         int result = in.read(b, off, len);
         if (sizeAvailable != -1 && result != -1) {
-            // didn't check whether result > sizeAvailable
-            sizeAvailable -= result;
+            if (result > sizeAvailable) {
+                sizeAvailable = 0;
+            } else {
+                sizeAvailable -= result;
+            }
         }
         return result;
     }
@@ -87,8 +90,11 @@ public class InterruptibleInputStream extends FilterInputStream {
 
         long result = in.skip(n);
         if (sizeAvailable != -1 && result != -1) {
-            // didn't check whether result > sizeAvailable
-            sizeAvailable -= result;
+            if (result > sizeAvailable) {
+                sizeAvailable = 0;
+            } else {
+                sizeAvailable -= result;
+            }
         }
         return result;
     }

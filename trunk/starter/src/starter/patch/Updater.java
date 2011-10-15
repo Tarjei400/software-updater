@@ -1,5 +1,6 @@
 package starter.patch;
 
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -23,58 +24,34 @@ import starter.util.Util;
  */
 public class Updater {
 
-    private Updater() {
+    protected Updater() {
     }
 
-    public static boolean update(File clientScriptFile, Client clientScript, File tempDir, String windowTitle, String windowIcon, String title, String icon) {
-        boolean returnResult = true;
+    protected static int getPatchStartIndex(Patch patch, PatchLogReader patchLogReader) {
+        if (patchLogReader == null) {
+            return 0;
+        }
+        UnfinishedPatch unfinishedPatch = patchLogReader.getUnfinishedPatch();
+        if (unfinishedPatch != null) {
+            if (new File(patch.getPath()).getAbsolutePath().equals(unfinishedPatch.getPatchPath())) {
+                return unfinishedPatch.getFileIndex();
+            }
+        }
+        return 0;
+    }
+
+    public static UpdateResult update(File clientScriptFile, Client clientScript, File tempDir, String windowTitle, Image windowIcon, String title, Image icon) {
+        UpdateResult returnResult = new UpdateResult(true, false);
 
         List<Patch> patches = clientScript.getPatches();
         if (patches.isEmpty()) {
-            return true;
+            return new UpdateResult(true, true);
         }
 
         // action log
         File logFile = new File(tempDir + "/action.log");
 
-        // read log history
-        PatchLogReader patchActionLogReader = null;
-        try {
-            patchActionLogReader = new PatchLogReader(logFile);
-        } catch (Exception ex) {
-        }
-        if (patchActionLogReader != null) {
-            try {
-                boolean rewriteClientXML = false;
-
-                List<String> finishedPatches = patchActionLogReader.getfinishedPatches();
-                for (String finishedPatch : finishedPatches) {
-                    Iterator<Patch> iterator = patches.iterator();
-                    while (iterator.hasNext()) {
-                        Patch _patch = iterator.next();
-                        if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
-                            rewriteClientXML = true;
-                            iterator.remove();
-                        }
-                    }
-                }
-
-                if (rewriteClientXML) {
-                    clientScript.setPatches(patches);
-                    if (!saveClientScript(clientScriptFile, clientScript, tempDir)) {
-                        return false;
-                    }
-                }
-
-                if (patches.isEmpty()) {
-                    return true;
-                }
-            } catch (Exception ex) {
-                return false;
-            }
-        }
-
-        // frame
+        // GUI
         final Thread currentThread = Thread.currentThread();
         final UpdaterWindow updaterGUI = new UpdaterWindow(windowTitle, windowIcon, title, icon);
         updaterGUI.addListener(new ActionListener() {
@@ -91,24 +68,54 @@ public class Updater {
         updaterFrame.setVisible(true);
 
         // patch
-        boolean canLaunchSoftware = true;
         FileOutputStream lockFileOut = null;
         FileLock lock = null;
         PatchLogWriter patchActionLogWriter = null;
         try {
+            PatchLogReader patchLogReader = null;
+            //<editor-fold defaultstate="collapsed" desc="read log">
+            try {
+                patchLogReader = new PatchLogReader(logFile);
+            } catch (Exception ex) {
+                // ignore
+            }
+            if (patchLogReader != null) {
+                boolean rewriteClientXML = false;
+
+                List<String> finishedPatches = patchLogReader.getfinishedPatches();
+                for (String finishedPatch : finishedPatches) {
+                    Iterator<Patch> iterator = patches.iterator();
+                    while (iterator.hasNext()) {
+                        Patch _patch = iterator.next();
+                        if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
+                            rewriteClientXML = true;
+                            iterator.remove();
+                        }
+                    }
+                }
+
+                if (rewriteClientXML) {
+                    clientScript.setPatches(patches);
+                    saveClientScript(clientScriptFile, clientScript, tempDir);
+                }
+
+                if (patches.isEmpty()) {
+                    return new UpdateResult(true, true);
+                }
+            }
+            //</editor-fold>
+
             updaterGUI.setProgress(1);
             updaterGUI.setMessage("Check to see if there is another updater running ...");
-
             // acquire lock
             lockFileOut = new FileOutputStream(tempDir + "/update.lck");
             lock = lockFileOut.getChannel().tryLock();
             if (lock == null) {
-                throw new Exception();
+                throw new Exception("There is another updater running.");
             }
 
             updaterGUI.setProgress(2);
             updaterGUI.setMessage("Clear log ...");
-
             // truncate log file
             new FileOutputStream(logFile).close();
             // open log file
@@ -116,7 +123,6 @@ public class Updater {
 
             updaterGUI.setProgress(3);
             updaterGUI.setMessage("Starting ...");
-
             // iterate patches and do patch
             final float stepSize = 97F / (float) patches.size();
             int count = -1;
@@ -127,13 +133,13 @@ public class Updater {
 
                 // temporary storage folder for this patch
                 if (!Util.makeDir(tempDir.getAbsolutePath() + "/" + count)) {
-                    throw new Exception();
+                    throw new Exception("Failed to create folder for patches.");
                 }
                 File tempDirForPatch = new File(tempDir.getAbsolutePath() + "/" + count);
 
                 // initialize patcher
                 final int _count = count;
-                final Patcher _patcher = new Patcher(new PatcherListener() {
+                Patcher _patcher = new Patcher(new PatcherListener() {
 
                     @Override
                     public void patchProgress(int percentage, String message) {
@@ -153,45 +159,37 @@ public class Updater {
                     }
                 }, patchActionLogWriter, new File(_patch.getPath()), tempDirForPatch);
 
-                // get file index
-                int startFromFileIndex = 0;
-                UnfinishedPatch unfinishedPatch = patchActionLogReader.getUnfinishedPatch();
-                if (unfinishedPatch != null) {
-                    if (new File(_patch.getPath()).getAbsolutePath().equals(unfinishedPatch.getPatchPath())) {
-                        startFromFileIndex = unfinishedPatch.getFileIndex();
-                    }
-                }
-
                 // patch
-                if (!_patcher.doPatch(startFromFileIndex)) {
-                    throw new Exception();
-                } else {
-                    // patch succeed
+                if (!_patcher.doPatch(getPatchStartIndex(_patch, patchLogReader))) {
+                    throw new Exception("Do patch failed.");
+                } else { // patch succeed
                     // remove from patches list
                     iterator.remove();
+
                     // save the client scirpt
                     clientScript.setPatches(patches);
-                    if (!saveClientScript(clientScriptFile, clientScript, tempDir)) {
-                        throw new Exception();
-                    }
+                    saveClientScript(clientScriptFile, clientScript, tempDir);
+
                     Util.truncateFolder(tempDirForPatch);
                     tempDirForPatch.delete();
                 }
             }
         } catch (Exception ex) {
-            returnResult = false;
-
             JOptionPane.showMessageDialog(updaterFrame, "An error occurred when updating the software.");
+
+            boolean launchSoftware = false;
+
             if (updaterGUI.isCancelEnabled()) {
                 Object[] options = {"Launch", "Exit"};
-                int result = JOptionPane.showOptionDialog(null, "Continue to launch the software?", "Continue action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                int result = JOptionPane.showOptionDialog(updaterFrame, "Continue to launch the software?", "Continue action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
                 if (result == 0) {
-                    returnResult = true;
+                    launchSoftware = true;
+                } else {
+                    JOptionPane.showMessageDialog(updaterFrame, "You can restart the software to try to update files again.");
                 }
-            } else {
-                JOptionPane.showMessageDialog(updaterFrame, "You can restart the software to try to update files again.");
             }
 
+            returnResult = new UpdateResult(false, launchSoftware);
             Logger.getLogger(Updater.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             updaterFrame.setVisible(false);
@@ -209,16 +207,38 @@ public class Updater {
             } catch (IOException ex) {
                 Logger.getLogger(Updater.class.getName()).log(Level.SEVERE, null, ex);
             }
+            if (returnResult.isUpdateSucceed()) {
+                // remove log
+                logFile.delete();
+            }
         }
 
         return returnResult;
     }
 
-    protected static boolean saveClientScript(File clientScriptFile, Client clientScript, File tempDir) {
-        File clientTemp = new File(tempDir + "/client.xml");
-        if (!Util.writeFile(clientTemp, clientScript.output()) || !clientScriptFile.delete() || !clientTemp.renameTo(clientScriptFile)) {
-            return false;
+    protected static void saveClientScript(File clientScriptFile, Client clientScript, File tempDir) throws IOException {
+        File clientScriptTemp = new File(tempDir + "/client.xml");
+        if (!Util.writeFile(clientScriptTemp, clientScript.output()) || !clientScriptFile.delete() || !clientScriptTemp.renameTo(clientScriptFile)) {
+            throw new IOException("Failed to save to script.");
         }
-        return true;
+    }
+
+    public static class UpdateResult {
+
+        protected boolean updateSucceed;
+        protected boolean launchSoftware;
+
+        public UpdateResult(boolean updateSucceed, boolean launchSoftware) {
+            this.updateSucceed = updateSucceed;
+            this.launchSoftware = launchSoftware;
+        }
+
+        public boolean isUpdateSucceed() {
+            return updateSucceed;
+        }
+
+        public boolean isLaunchSoftware() {
+            return launchSoftware;
+        }
     }
 }

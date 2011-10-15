@@ -1,7 +1,7 @@
 package starter.gui;
 
 import java.awt.Dimension;
-import java.awt.Toolkit;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -17,23 +17,22 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
-import starter.util.Util;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
 public class UpdaterWindow {
 
-    private final List<ActionListener> listeners;
+    protected final List<ActionListener> listeners;
     //
-    private JFrame frame;
+    protected JFrame frame;
     //
-    private JTextField messageField;
-    private JLabel progressLabel;
-    private JProgressBar progressBar;
-    private JButton cancelButton;
+    protected JTextField messageField;
+    protected JLabel progressLabel;
+    protected JProgressBar progressBar;
+    protected JButton cancelButton;
 
-    public UpdaterWindow(String windowTitle, String windowIcon, String title, String icon) {
+    public UpdaterWindow(String windowTitle, Image windowIcon, String title, Image icon) {
         listeners = Collections.synchronizedList(new ArrayList<ActionListener>());
 
         // message
@@ -90,7 +89,7 @@ public class UpdaterWindow {
 
         // main content panel
         JTitledPanel panel = new JTitledPanel();
-        panel.setTitle(title, new ImageIcon(Toolkit.getDefaultToolkit().getImage(JTitledPanel.class.getResource(icon))));
+        panel.setTitle(title, new ImageIcon(icon));
         panel.getContentPanel().add(messageBox);
         panel.getContentPanel().add(progressBox);
         panel.getContentPanel().add(buttonBox);
@@ -100,7 +99,7 @@ public class UpdaterWindow {
         // frame
         frame = new JFrame();
         frame.setTitle(windowTitle);
-        frame.setIconImage(Toolkit.getDefaultToolkit().getImage(JTitledPanel.class.getResource(windowIcon)));
+        frame.setIconImage(windowIcon);
         frame.addWindowListener(new WindowAdapter() {
 
             @Override
@@ -147,13 +146,5 @@ public class UpdaterWindow {
 
     public void setEnableCancel(boolean enable) {
         cancelButton.setEnabled(enable);
-    }
-
-    public static void main(String[] args) {
-        Util.setLookAndFeel();
-
-        UpdaterWindow updaterFrame = new UpdaterWindow("Language Files Tool", "/starter/logo.png", "Software Updater", "/starter/gui/images/UpdaterFrame/titleIcon.png");
-        JFrame frame = updaterFrame.getGUI();
-        frame.setVisible(true);
     }
 }

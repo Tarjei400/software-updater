@@ -1,11 +1,13 @@
 package starter.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.channels.FileLock;
 import java.security.MessageDigest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,19 +50,25 @@ public class Util {
 
     public static String getSHA1(File file) {
         String returnResult = null;
+
         InputStream fin = null;
         try {
             fin = new FileInputStream(file);
             MessageDigest messageDigest = MessageDigest.getInstance("SHA1");
 
-            int byteRead;
+            int byteRead, cumulateByteRead = 0;
             byte[] b = new byte[8096];
-            while ((byteRead = fin.read(b)) != -1) {
+            while ((byteRead = fin.read(b)) > 0) {
                 messageDigest.update(b, 0, byteRead);
+                cumulateByteRead += byteRead;
             }
 
+            if (cumulateByteRead != file.length()) {
+                throw new Exception("The total number of bytes read does not match the file size: " + file.getAbsolutePath());
+            }
             returnResult = getHexString(messageDigest.digest());
         } catch (Exception ex) {
+            returnResult = null;
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
@@ -71,6 +79,7 @@ public class Util {
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+
         return returnResult;
     }
 
@@ -98,11 +107,11 @@ public class Util {
             }
 
             if (cumulateByteRead != content.length) {
-                return null;
+                throw new Exception("The total number of bytes read does not match the file size: " + file.getAbsolutePath());
             }
         } catch (Exception ex) {
-            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             content = null;
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 if (fin != null) {
@@ -148,14 +157,19 @@ public class Util {
             fromFileStream = new FileInputStream(fromFile);
             toFileStream = new FileOutputStream(toFile);
 
-            int byteRead = 0;
+            int byteRead = 0, cumulateByteRead = 0;
             byte[] buf = new byte[32768];
             while ((byteRead = fromFileStream.read(buf)) != -1) {
                 toFileStream.write(buf, 0, byteRead);
+                cumulateByteRead += byteRead;
             }
-        } catch (IOException ex) {
-            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+
+            if (cumulateByteRead != fromFile.length()) {
+                throw new Exception();
+            }
+        } catch (Exception ex) {
             returnResult = false;
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
                 if (fromFileStream != null) {
@@ -212,18 +226,22 @@ public class Util {
     }
 
     public static boolean makeDir(String directoryPath) {
+        boolean returnResult = false;
+
         try {
             File file = new File(directoryPath);
             if (!file.isDirectory()) {
                 if (!file.mkdir()) {
-                    return false;
+                    throw new Exception("Failed to create folder: " + directoryPath);
                 }
             }
+            returnResult = true;
         } catch (Exception ex) {
+            returnResult = false;
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
         }
-        return true;
+
+        return returnResult;
     }
 
     /**
@@ -235,13 +253,48 @@ public class Util {
         String returnResult = null;
         try {
             if (file.isDirectory()) {
-                return file.getAbsolutePath();
+                returnResult = file.getAbsolutePath();
             } else {
-                return getFileDirectory(file.getAbsolutePath());
+                returnResult = getFileDirectory(file.getAbsolutePath());
             }
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }
+        return returnResult;
+    }
+
+    public static byte[] readResourceFile(String path) {
+        byte[] returnResult = null;
+
+        int byteRead = 0;
+        byte[] b = new byte[256];
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        InputStream in = null;
+
+        try {
+            in = Util.class.getResourceAsStream(path);
+            if (in == null) {
+                throw new Exception("Resources not found: " + path);
+            }
+
+            while ((byteRead = in.read(b)) > 0) {
+                bout.write(b, 0, byteRead);
+            }
+
+            returnResult = bout.toByteArray();
+        } catch (Exception ex) {
+            returnResult = null;
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                if (in != null) {
+                    in.close();
+                }
+            } catch (IOException ex) {
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
         return returnResult;
     }
 
@@ -251,10 +304,39 @@ public class Util {
      * @return the file parent path
      */
     public static String getFileDirectory(String filePath) {
-        int pos = filePath.replace((CharSequence) "\\", (CharSequence) "/").lastIndexOf('/');
+        int pos = filePath.replace((CharSequence) File.separator, (CharSequence) "/").lastIndexOf('/');
         if (pos != -1) {
             return filePath.substring(0, pos);
         }
         return filePath;
+    }
+
+    public static boolean tryLock(File file) {
+        boolean returnResult = false;
+
+        FileInputStream fin = null;
+        FileLock lock = null;
+        try {
+            fin = new FileInputStream(file);
+            lock = fin.getChannel().tryLock();
+            if (lock == null) {
+                throw new Exception("Failed to acquire an exclusive lock on file: " + file.getAbsolutePath());
+            }
+            returnResult = true;
+        } catch (Exception ex) {
+            returnResult = false;
+        } finally {
+            try {
+                if (lock != null) {
+                    lock.release();
+                }
+                if (fin != null) {
+                    fin.close();
+                }
+            } catch (IOException ex) {
+            }
+        }
+
+        return returnResult;
     }
 }

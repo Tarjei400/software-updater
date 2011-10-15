@@ -1,25 +1,15 @@
 package starter.script;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import starter.util.XMLUtil;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -27,12 +17,22 @@ import org.w3c.dom.NodeList;
 public class Client {
 
     protected String version;
+    protected String catalogUrl;
+    protected String jarPath;
+    protected String mainClass;
+    protected String storagePath;
+    protected Information information;
     protected long lastUpdated;
     protected String publicKey;
     protected List<Patch> patches;
 
-    public Client(String version, long lastUpdated, String publicKey, List<Patch> patches) {
+    public Client(String version, String catalogUrl, String jarPath, String mainClass, String storagePath, Information information, long lastUpdated, String publicKey, List<Patch> patches) {
         this.version = version;
+        this.catalogUrl = catalogUrl;
+        this.jarPath = jarPath;
+        this.mainClass = mainClass;
+        this.storagePath = storagePath;
+        this.information = information;
         this.lastUpdated = lastUpdated;
         this.publicKey = publicKey;
         this.patches = new ArrayList<Patch>(patches);
@@ -44,6 +44,46 @@ public class Client {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public String getCatalogUrl() {
+        return catalogUrl;
+    }
+
+    public void setCatalogUrl(String catalogUrl) {
+        this.catalogUrl = catalogUrl;
+    }
+
+    public String getJarPath() {
+        return jarPath;
+    }
+
+    public void setJarPath(String jarPath) {
+        this.jarPath = jarPath;
+    }
+
+    public String getMainClass() {
+        return mainClass;
+    }
+
+    public void setMainClass(String mainClass) {
+        this.mainClass = mainClass;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    public Information getInformation() {
+        return information;
+    }
+
+    public void setInformation(Information information) {
+        this.information = information;
     }
 
     public long getLastUpdated() {
@@ -70,116 +110,91 @@ public class Client {
         this.patches = new ArrayList<Patch>(patches);
     }
 
-    public static Client read(byte[] content) {
-        try {
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+    public static Client read(byte[] content) throws InvalidFormatException {
+        Document doc = XMLUtil.readDocument(content);
+        if (doc == null) {
+            throw new InvalidFormatException();
+        }
 
-            Document doc = dBuilder.parse(new ByteArrayInputStream(content));
-            Element _rootNode = doc.getDocumentElement();
+        Element _rootNode = doc.getDocumentElement();
 
+        String _version = XMLUtil.getTextContent(_rootNode, "version", true);
 
-            NodeList _versionNodeList = _rootNode.getElementsByTagName("version");
-            if (_versionNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _versionElement = (Element) _versionNodeList.item(0);
+        String _catalogUrl = XMLUtil.getTextContent(_rootNode, "catalog-url", true);
+        String _jarPath = XMLUtil.getTextContent(_rootNode, "jar-path", true);
+        String _mainClass = XMLUtil.getTextContent(_rootNode, "main-class", true);
+        String _storagePath = XMLUtil.getTextContent(_rootNode, "storage-path", true);
 
-            String _version = _versionElement.getTextContent();
+        Information _information = Information.read(XMLUtil.getElement(_rootNode, "information", true));
 
+        String _lastUpdatedString = XMLUtil.getTextContent(_rootNode, "last-updated", false);
+        Long _lastUpdated = _lastUpdatedString != null ? Long.parseLong(_lastUpdatedString) : -1;
 
-            Long _lastUpdated = -1L;
-            NodeList _lastUpdatedNodeList = _rootNode.getElementsByTagName("last-updated");
-            if (_lastUpdatedNodeList.getLength() != 0) {
-                Element _lastUpdatedElement = (Element) _lastUpdatedNodeList.item(0);
-                _lastUpdated = Long.parseLong(_lastUpdatedElement.getTextContent());
-            }
+        String _publicKey = XMLUtil.getTextContent(_rootNode, "public-key", false);
 
-
-            String _publicKey = null;
-            NodeList _publicKeyNodeList = _rootNode.getElementsByTagName("public-key");
-            if (_publicKeyNodeList.getLength() != 0) {
-                Element _publicKeyElement = (Element) _publicKeyNodeList.item(0);
-                _publicKey = _publicKeyElement.getTextContent();
-            }
-
-
-            NodeList _patchesNodeList = _rootNode.getElementsByTagName("patches");
-            if (_patchesNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _patchesElement = (Element) _patchesNodeList.item(0);
-
-            List<Patch> _patches = new ArrayList<Patch>();
-
+        List<Patch> _patches = new ArrayList<Patch>();
+        Element _patchesElement = XMLUtil.getElement(_rootNode, "patches", false);
+        if (_patchesElement != null) {
             NodeList _patchNodeList = _patchesElement.getElementsByTagName("patch");
             for (int i = 0, iEnd = _patchNodeList.getLength(); i < iEnd; i++) {
                 Element _patchNode = (Element) _patchNodeList.item(i);
-                Patch _patch = Patch.read(_patchNode);
-                if (_patch != null) {
-                    _patches.add(_patch);
-                }
+                _patches.add(Patch.read(_patchNode));
             }
-
-            return new Client(_version, _lastUpdated, _publicKey, _patches);
-        } catch (Exception ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return null;
+
+        return new Client(_version, _catalogUrl, _jarPath, _mainClass, _storagePath, _information, _lastUpdated, _publicKey, _patches);
     }
 
     public String output() {
-        try {
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-            Document doc = docBuilder.newDocument();
-            Element rootElement = doc.createElement("root");
-            doc.appendChild(rootElement);
-
-
-            Element versionElement = doc.createElement("version");
-            versionElement.setTextContent(version);
-            rootElement.appendChild(versionElement);
-
-
-            Element patchesElement = doc.createElement("patches");
-            rootElement.appendChild(patchesElement);
-
-            for (Patch patch : patches) {
-                Element _patchElement = patch.getElement(doc);
-                if (_patchElement != null) {
-                    patchesElement.appendChild(_patchElement);
-                }
-            }
-
-
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            DOMSource source = new DOMSource(doc);
-
-            StringWriter writer = new StringWriter();
-            StreamResult result = new StreamResult(writer);
-            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.transform(source, result);
-
-            return writer.toString();
-        } catch (Exception ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        Document doc = XMLUtil.createEmptyDocument();
+        if (doc == null) {
+            return null;
         }
 
-        return "";
+        Element rootElement = doc.createElement("root");
+        doc.appendChild(rootElement);
+
+        Element versionElement = doc.createElement("version");
+        versionElement.setTextContent(version);
+        rootElement.appendChild(versionElement);
+
+        Element catalogUrlElement = doc.createElement("catalog-url");
+        catalogUrlElement.setTextContent(catalogUrl);
+        rootElement.appendChild(catalogUrlElement);
+
+        Element jarPathElement = doc.createElement("jar-path");
+        jarPathElement.setTextContent(jarPath);
+        rootElement.appendChild(jarPathElement);
+
+        Element mainClassElement = doc.createElement("main-class");
+        mainClassElement.setTextContent(mainClass);
+        rootElement.appendChild(mainClassElement);
+
+        Element storagePathElement = doc.createElement("storage-path");
+        storagePathElement.setTextContent(storagePath);
+        rootElement.appendChild(storagePathElement);
+
+        Element informationElement = information.getElement(doc);
+        rootElement.appendChild(informationElement);
+
+        Element patchesElement = doc.createElement("patches");
+        rootElement.appendChild(patchesElement);
+        for (Patch patch : patches) {
+            Element _patchElement = patch.getElement(doc);
+            if (_patchElement != null) {
+                patchesElement.appendChild(_patchElement);
+            }
+        }
+
+        return XMLUtil.getOutput(doc);
     }
 
     public static class Patch {
 
-        private String path;
-        private String encryptionType;
-        private String encryptionKey;
-        private String encryptionIV;
+        protected String path;
+        protected String encryptionType;
+        protected String encryptionKey;
+        protected String encryptionIV;
 
         public Patch(String path, String encryptionType, String encryptionKey, String encryptionIV) {
             this.path = path;
@@ -220,39 +235,22 @@ public class Client {
             this.encryptionIV = encryptionIV;
         }
 
-        protected static Patch read(Element updateElement) {
-            if (updateElement == null) {
-                return null;
+        protected static Patch read(Element patchElement) throws InvalidFormatException {
+            if (patchElement == null) {
+                throw new NullPointerException();
             }
 
-            NodeList _pathNodeList = updateElement.getElementsByTagName("path");
-            if (_pathNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _pathElement = (Element) _pathNodeList.item(0);
-            String _path = _pathElement.getTextContent();
+            String _path = XMLUtil.getTextContent(patchElement, "path", true);
 
             String _encryptionType = null;
             String _encryptionKey = null;
             String _encryptionIV = null;
 
-            NodeList _encryptionNodeList = updateElement.getElementsByTagName("encryption");
-            if (_encryptionNodeList.getLength() != 0) {
-                Element _encryptionElement = (Element) _encryptionNodeList.item(0);
-
-                NodeList _encryptionTypeNodeList = _encryptionElement.getElementsByTagName("type");
-                NodeList _encryptionKeyNodeList = _encryptionElement.getElementsByTagName("key");
-                NodeList _encryptionIVNodeList = _encryptionElement.getElementsByTagName("IV");
-                if (_encryptionTypeNodeList.getLength() == 0 || _encryptionKeyNodeList.getLength() == 0 || _encryptionIVNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _encryptionTypeElement = (Element) _encryptionTypeNodeList.item(0);
-                Element _encryptionKeyElement = (Element) _encryptionKeyNodeList.item(0);
-                Element _encryptionIVElement = (Element) _encryptionIVNodeList.item(0);
-
-                _encryptionType = _encryptionTypeElement.getTextContent();
-                _encryptionKey = _encryptionKeyElement.getTextContent();
-                _encryptionIV = _encryptionIVElement.getTextContent();
+            Element _encryptionElement = XMLUtil.getElement(patchElement, "encryption", false);
+            if (_encryptionElement != null) {
+                _encryptionType = XMLUtil.getTextContent(_encryptionElement, "type", true);
+                _encryptionKey = XMLUtil.getTextContent(_encryptionElement, "key", true);
+                _encryptionIV = XMLUtil.getTextContent(_encryptionElement, "IV", true);
             }
 
             return new Patch(_path, _encryptionType, _encryptionKey, _encryptionIV);
@@ -286,6 +284,131 @@ public class Client {
         }
     }
 
+    public static class Information {
+
+        protected String softwareName;
+        protected String softwareIconLocation;
+        protected String softwareIconPath;
+        protected String updaterTitle;
+        protected String updaterIconLocation;
+        protected String updaterIconPath;
+
+        public Information(String softwareName, String softwareIconLocation, String softwareIconPath, String updaterTitle, String updaterIconLocation, String updaterIconPath) {
+            this.softwareName = softwareName;
+            this.softwareIconLocation = softwareIconLocation;
+            this.softwareIconPath = softwareIconPath;
+            this.updaterTitle = updaterTitle;
+            this.updaterIconLocation = updaterIconLocation;
+            this.updaterIconPath = updaterIconPath;
+        }
+
+        public String getSoftwareName() {
+            return softwareName;
+        }
+
+        public void setSoftwareName(String softwareName) {
+            this.softwareName = softwareName;
+        }
+
+        public String getSoftwareIconLocation() {
+            return softwareIconLocation;
+        }
+
+        public void setSoftwareIconLocation(String softwareIconLocation) {
+            this.softwareIconLocation = softwareIconLocation;
+        }
+
+        public String getSoftwareIconPath() {
+            return softwareIconPath;
+        }
+
+        public void setSoftwareIconPath(String softwareIconPath) {
+            this.softwareIconPath = softwareIconPath;
+        }
+
+        public String getUpdaterTitle() {
+            return updaterTitle;
+        }
+
+        public void setUpdaterTitle(String updaterTitle) {
+            this.updaterTitle = updaterTitle;
+        }
+
+        public String getUpdaterIconLocation() {
+            return updaterIconLocation;
+        }
+
+        public void setUpdaterIconLocation(String updaterIconLocation) {
+            this.updaterIconLocation = updaterIconLocation;
+        }
+
+        public String getUpdaterIconPath() {
+            return updaterIconPath;
+        }
+
+        public void setUpdaterIconPath(String updaterIconPath) {
+            this.updaterIconPath = updaterIconPath;
+        }
+
+        protected static Information read(Element informationElement) throws InvalidFormatException {
+            if (informationElement == null) {
+                throw new NullPointerException();
+            }
+
+            Element _softwareNameElement = XMLUtil.getElement(informationElement, "software-name", true);
+            String _softwareName = _softwareNameElement.getTextContent();
+
+            Element _softwareIconElement = XMLUtil.getElement(informationElement, "software-icon", true);
+            String _softwareIconLocation = XMLUtil.getTextContent(_softwareIconElement, "location", true);
+            String _softwareIconPath = XMLUtil.getTextContent(_softwareIconElement, "path", true);
+
+            Element _updaterNameElement = XMLUtil.getElement(informationElement, "updater-title", true);
+            String _updaterName = _updaterNameElement.getTextContent();
+
+            Element _updaterIconElement = XMLUtil.getElement(informationElement, "updater-icon", true);
+            String _updaterIconLocation = XMLUtil.getTextContent(_updaterIconElement, "location", true);
+            String _updaterIconPath = XMLUtil.getTextContent(_updaterIconElement, "path", true);
+
+            return new Information(_softwareName, _softwareIconLocation, _softwareIconPath, _updaterName, _updaterIconLocation, _updaterIconPath);
+        }
+
+        protected Element getElement(Document doc) {
+            Element _information = doc.createElement("information");
+
+            Element _softwareName = doc.createElement("software-name");
+            _softwareName.appendChild(doc.createTextNode(softwareName));
+            _information.appendChild(_softwareName);
+
+            Element _softwareIcon = doc.createElement("software-icon");
+            _information.appendChild(_softwareIcon);
+
+            Element _softwareIconLocation = doc.createElement("location");
+            _softwareIconLocation.appendChild(doc.createTextNode(softwareIconLocation));
+            _softwareIcon.appendChild(_softwareIconLocation);
+
+            Element _softwareIconPath = doc.createElement("path");
+            _softwareIconPath.appendChild(doc.createTextNode(softwareIconPath));
+            _softwareIcon.appendChild(_softwareIconPath);
+
+            Element _updaterTitle = doc.createElement("updater-title");
+            _updaterTitle.appendChild(doc.createTextNode(updaterTitle));
+            _information.appendChild(_updaterTitle);
+
+            Element _updaterIcon = doc.createElement("updater-icon");
+            _information.appendChild(_updaterIcon);
+
+            Element _updaterIconLocation = doc.createElement("location");
+            _updaterIconLocation.appendChild(doc.createTextNode(updaterIconLocation));
+            _updaterIcon.appendChild(_updaterIconLocation);
+
+            Element _updaterIconPath = doc.createElement("path");
+            _updaterIconPath.appendChild(doc.createTextNode(updaterIconPath));
+            _updaterIcon.appendChild(_updaterIconPath);
+
+            return _information;
+        }
+    }
+
     public static void main(String[] args) throws FileNotFoundException, IOException {
         File file = new File("updater.xml");
         byte[] content = new byte[(int) file.length()];
@@ -294,7 +417,10 @@ public class Client {
         fin.read(content);
         fin.close();
 
-        Client client = Client.read(content);
-        System.out.println(client.output());
+        try {
+            Client client = Client.read(content);
+            System.out.println(client.output());
+        } catch (InvalidFormatException ex) {
+        }
     }
 }

@@ -12,18 +12,18 @@ import java.util.List;
  * The log is in human-readable format.
  * <p>
  * <h>Sample (separated by tab):</h><br />
- * [patchPath]	1.0.0 to 1.0.1	start<br />
- * [patchPath]	1.0.0 to 1.0.1	patch	0	start	[oldFilePath] -> [newFilePath]<br />
- * [patchPath]	1.0.0 to 1.0.1	patch	0	finish	[oldFilePath] -> [newFilePath]<br />
- * [patchPath]	1.0.0 to 1.0.1	finish
+ * [patchFullPath]	1.0.0 to 1.0.1	start<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	patch	0	start	[oldFilePath] -> [newFilePath]<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	patch	0	finish	[oldFilePath] -> [newFilePath]<br />
+ * [patchFullPath]	1.0.0 to 1.0.1	finish
  * </p>
  * <p><b>Note that '[' and ']' didn't really exist.</b></p>
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
 public class PatchLogReader {
 
-    private List<String> finishedPatches;
-    private UnfinishedPatch unfinishedPatch;
+    protected List<String> finishedPatches;
+    protected UnfinishedPatch unfinishedPatch;
 
     public PatchLogReader(File file) throws IOException {
         finishedPatches = new ArrayList<String>();
@@ -86,8 +86,8 @@ public class PatchLogReader {
 
     public static class UnfinishedPatch {
 
-        private String patchPath;
-        private int fileIndex;
+        protected String patchPath;
+        protected int fileIndex;
 
         protected UnfinishedPatch(String patchPath, int fileIndex) {
             this.patchPath = patchPath;
@@ -99,7 +99,7 @@ public class PatchLogReader {
         }
 
         /**
-         * The recovery should start from this file index.
+         * The recovery should start from this file index (including).
          */
         public int getFileIndex() {
             return fileIndex;

@@ -1,25 +1,15 @@
 package starter.script;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import starter.util.XMLUtil;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -70,124 +60,69 @@ public class Patch {
         this.validations = new ArrayList<ValidationFile>(validations);
     }
 
-    public static Patch read(byte[] content) {
-        try {
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-
-            Document doc = dBuilder.parse(new ByteArrayInputStream(content));
-            Element _updateNode = doc.getDocumentElement();
-
-
-            NodeList _versionNodeList = _updateNode.getElementsByTagName("version");
-            if (_versionNodeList.getLength() == 0) {
-                return null;
-            }
-            NodeList _versionFromNode = ((Element) _versionNodeList.item(0)).getElementsByTagName("from");
-            NodeList _versionToNode = ((Element) _versionNodeList.item(0)).getElementsByTagName("to");
-            if (_versionFromNode.getLength() == 0 || _versionToNode.getLength() == 0) {
-                return null;
-            }
-            Element _versionFromElement = (Element) _versionFromNode.item(0);
-            Element _versionToElement = (Element) _versionToNode.item(0);
-
-            String _versionFrom = _versionFromElement.getTextContent();
-            String _versionTo = _versionToElement.getTextContent();
-
-
-            NodeList _operationsNodeList = _updateNode.getElementsByTagName("operations");
-            if (_operationsNodeList.getLength() == 0) {
-                return null;
-            }
-
-            List<Operation> _operations = new ArrayList<Operation>();
-
-            NodeList _operationNodeList = ((Element) _operationsNodeList.item(0)).getElementsByTagName("operation");
-            for (int i = 0, iEnd = _operationNodeList.getLength(); i < iEnd; i++) {
-                Element _operationNode = (Element) _operationNodeList.item(i);
-                Operation _file = Operation.read(_operationNode);
-                if (_file != null) {
-                    _operations.add(_file);
-                }
-            }
-
-
-            NodeList _validationNodeList = _updateNode.getElementsByTagName("validation");
-            if (_validationNodeList.getLength() == 0) {
-                return null;
-            }
-
-            List<ValidationFile> _validations = new ArrayList<ValidationFile>();
-
-            NodeList _validationFileNodeList = ((Element) _validationNodeList.item(0)).getElementsByTagName("file");
-            for (int i = 0, iEnd = _validationFileNodeList.getLength(); i < iEnd; i++) {
-                Element _validationFileNode = (Element) _validationFileNodeList.item(i);
-                ValidationFile _validation = ValidationFile.read(_validationFileNode);
-                if (_validation != null) {
-                    _validations.add(_validation);
-                }
-            }
-
-            return new Patch(_versionFrom, _versionTo, _operations, _validations);
-        } catch (Exception ex) {
-            Logger.getLogger(Patch.class.getName()).log(Level.SEVERE, null, ex);
+    public static Patch read(byte[] content) throws InvalidFormatException {
+        Document doc = XMLUtil.readDocument(content);
+        if (doc == null) {
+            throw new InvalidFormatException();
         }
-        return null;
+
+        Element _updateNode = doc.getDocumentElement();
+
+        Element _versionElement = XMLUtil.getElement(_updateNode, "version", true);
+        String _versionFrom = XMLUtil.getTextContent(_versionElement, "from", true);
+        String _versionTo = XMLUtil.getTextContent(_versionElement, "to", true);
+
+        List<Operation> _operations = new ArrayList<Operation>();
+        Element operationsElement = XMLUtil.getElement(_updateNode, "operations", true);
+        NodeList _operationNodeList = operationsElement.getElementsByTagName("operation");
+        for (int i = 0, iEnd = _operationNodeList.getLength(); i < iEnd; i++) {
+            Element _operationNode = (Element) _operationNodeList.item(i);
+            _operations.add(Operation.read(_operationNode));
+        }
+
+        List<ValidationFile> _validations = new ArrayList<ValidationFile>();
+        Element validationElement = XMLUtil.getElement(_updateNode, "validation", true);
+        NodeList _validationFileNodeList = validationElement.getElementsByTagName("file");
+        for (int i = 0, iEnd = _validationFileNodeList.getLength(); i < iEnd; i++) {
+            Element _validationFileNode = (Element) _validationFileNodeList.item(i);
+            _validations.add(ValidationFile.read(_validationFileNode));
+        }
+
+        return new Patch(_versionFrom, _versionTo, _operations, _validations);
     }
 
     public String output() {
-        try {
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-            Document doc = docBuilder.newDocument();
-            Element rootElement = doc.createElement("update");
-            doc.appendChild(rootElement);
-
-
-            Element versionElement = doc.createElement("version");
-            rootElement.appendChild(versionElement);
-
-            Element versionFromElement = doc.createElement("from");
-            versionFromElement.setTextContent(versionFrom);
-            versionElement.appendChild(versionFromElement);
-            Element versionToElement = doc.createElement("to");
-            versionToElement.setTextContent(versionTo);
-            versionElement.appendChild(versionToElement);
-
-
-            Element operationsElement = doc.createElement("operations");
-            rootElement.appendChild(operationsElement);
-            for (Operation operation : operations) {
-                operationsElement.appendChild(operation.getElement(doc));
-            }
-
-
-            Element validationElement = doc.createElement("validation");
-            rootElement.appendChild(validationElement);
-            for (ValidationFile file : validations) {
-                validationElement.appendChild(file.getElement(doc));
-            }
-
-
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            DOMSource source = new DOMSource(doc);
-
-            StringWriter writer = new StringWriter();
-            StreamResult result = new StreamResult(writer);
-            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.transform(source, result);
-
-            return writer.toString();
-        } catch (Exception ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        Document doc = XMLUtil.createEmptyDocument();
+        if (doc == null) {
+            return null;
         }
 
-        return "";
+        Element rootElement = doc.createElement("update");
+        doc.appendChild(rootElement);
+
+        Element versionElement = doc.createElement("version");
+        rootElement.appendChild(versionElement);
+
+        Element versionFromElement = doc.createElement("from");
+        versionFromElement.setTextContent(versionFrom);
+        versionElement.appendChild(versionFromElement);
+        Element versionToElement = doc.createElement("to");
+        versionToElement.setTextContent(versionTo);
+        versionElement.appendChild(versionToElement);
+
+        Element operationsElement = doc.createElement("operations");
+        rootElement.appendChild(operationsElement);
+        for (Operation operation : operations) {
+            operationsElement.appendChild(operation.getElement(doc));
+        }
+
+        Element validationElement = doc.createElement("validation");
+        rootElement.appendChild(validationElement);
+        for (ValidationFile file : validations) {
+            validationElement.appendChild(file.getElement(doc));
+        }
+
+        return XMLUtil.getOutput(doc);
     }
 
     public static class Operation {
@@ -289,115 +224,46 @@ public class Patch {
             this.newFileLength = newFileLength;
         }
 
-        protected static Operation read(Element fileElement) {
-            if (fileElement == null) {
-                return null;
+        protected static Operation read(Element operationElement) throws InvalidFormatException {
+            if (operationElement == null) {
+                throw new NullPointerException();
             }
 
-            NodeList _typeNodeList = fileElement.getElementsByTagName("type");
-            if (_typeNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _typeElement = (Element) _typeNodeList.item(0);
-            String _type = _typeElement.getTextContent();
+            String _type = XMLUtil.getTextContent(operationElement, "type", true);
 
-            //<editor-fold defaultstate="collapsed" desc="patch">
             int pos = -1;
             int length = -1;
             if (_type.equals("patch") || _type.equals("replace") || _type.equals("new")) {
-                NodeList _patchNodeList = fileElement.getElementsByTagName("patch");
-                if (_patchNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _patchElement = (Element) _patchNodeList.item(0);
-
-                NodeList _posNodeList = _patchElement.getElementsByTagName("pos");
-                if (_posNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _posElement = (Element) _posNodeList.item(0);
-                NodeList _lengthNodeList = _patchElement.getElementsByTagName("length");
-                if (_lengthNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _lengthElement = (Element) _lengthNodeList.item(0);
-
-                pos = Integer.parseInt(_posElement.getTextContent());
-                length = Integer.parseInt(_lengthElement.getTextContent());
+                Element _patchElement = XMLUtil.getElement(operationElement, "patch", true);
+                pos = Integer.parseInt(XMLUtil.getTextContent(_patchElement, "pos", true));
+                length = Integer.parseInt(XMLUtil.getTextContent(_patchElement, "length", true));
             }
-            //</editor-fold>
 
-            //<editor-fold defaultstate="collapsed" desc="old">
             String oldPath = null;
             String oldChecksum = null;
             int oldLength = -1;
             if (_type.equals("patch") || _type.equals("replace") || _type.equals("remove")) {
-                NodeList _oldFileNodeList = fileElement.getElementsByTagName("old-file");
-                if (_oldFileNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _oldFileElement = (Element) _oldFileNodeList.item(0);
-
-                NodeList _oldPathNodeList = _oldFileElement.getElementsByTagName("path");
-                if (_oldPathNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _oldPathElement = (Element) _oldPathNodeList.item(0);
-                NodeList _oldChecksumNodeList = _oldFileElement.getElementsByTagName("checksum");
-                if (_oldChecksumNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _oldChecksumElement = (Element) _oldChecksumNodeList.item(0);
-                NodeList _oldLengthNodeList = _oldFileElement.getElementsByTagName("length");
-                if (_oldLengthNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _oldLengthElement = (Element) _oldLengthNodeList.item(0);
-
-                oldPath = _oldPathElement.getTextContent();
-                oldChecksum = _oldChecksumElement.getTextContent();
-                oldLength = Integer.parseInt(_oldLengthElement.getTextContent());
+                Element _oldFileElement = XMLUtil.getElement(operationElement, "old-file", true);
+                oldPath = XMLUtil.getTextContent(_oldFileElement, "path", true);
+                oldChecksum = XMLUtil.getTextContent(_oldFileElement, "checksum", true);
+                oldLength = Integer.parseInt(XMLUtil.getTextContent(_oldFileElement, "length", true));
             }
-            //</editor-fold>
 
-            //<editor-fold defaultstate="collapsed" desc="new">
             String newPath = null;
             String newChecksum = null;
             int newLength = -1;
             if (_type.equals("patch") || _type.equals("replace") || _type.equals("new")) {
-                NodeList _newFileNodeList = fileElement.getElementsByTagName("new-file");
-                if (_newFileNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _newFileElement = (Element) _newFileNodeList.item(0);
-
-                NodeList _newPathNodeList = _newFileElement.getElementsByTagName("path");
-                if (_newPathNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _newPathElement = (Element) _newPathNodeList.item(0);
-                NodeList _newChecksumNodeList = _newFileElement.getElementsByTagName("checksum");
-                if (_newChecksumNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _newChecksumElement = (Element) _newChecksumNodeList.item(0);
-                NodeList _newLengthNodeList = _newFileElement.getElementsByTagName("length");
-                if (_newLengthNodeList.getLength() == 0) {
-                    return null;
-                }
-                Element _newLengthElement = (Element) _newLengthNodeList.item(0);
-
-                newPath = _newPathElement.getTextContent();
-                newChecksum = _newChecksumElement.getTextContent();
-                newLength = Integer.parseInt(_newLengthElement.getTextContent());
+                Element _newFileElement = XMLUtil.getElement(operationElement, "new-file", true);
+                newPath = XMLUtil.getTextContent(_newFileElement, "path", true);
+                newChecksum = XMLUtil.getTextContent(_newFileElement, "checksum", true);
+                newLength = Integer.parseInt(XMLUtil.getTextContent(_newFileElement, "length", true));
             }
-            //</editor-fold>
 
             return new Operation(_type, pos, length, oldPath, oldChecksum, oldLength, newPath, newChecksum, newLength);
         }
 
         protected Element getElement(Document doc) {
-            Element _file = doc.createElement("file");
+            Element _file = doc.createElement("operation");
 
             Element _type = doc.createElement("type");
             _type.appendChild(doc.createTextNode(type));
@@ -420,7 +286,7 @@ public class Patch {
 
             //<editor-fold defaultstate="collapsed" desc="old">
             if (oldFilePath != null) {
-                Element _old = doc.createElement("old");
+                Element _old = doc.createElement("old-file");
                 _file.appendChild(_old);
 
                 Element _oldFilePath = doc.createElement("path");
@@ -439,7 +305,7 @@ public class Patch {
 
             //<editor-fold defaultstate="collapsed" desc="new">
             if (newFilePath != null) {
-                Element _new = doc.createElement("new");
+                Element _new = doc.createElement("new-file");
                 _file.appendChild(_new);
 
                 Element _newFilePath = doc.createElement("path");
@@ -462,9 +328,9 @@ public class Patch {
 
     public static class ValidationFile {
 
-        private String filePath;
-        private String fileChecksum;
-        private String fileLength;
+        protected String filePath;
+        protected String fileChecksum;
+        protected String fileLength;
 
         public ValidationFile(String filePath, String fileChecksum, String fileLength) {
             this.filePath = filePath;
@@ -496,32 +362,14 @@ public class Patch {
             this.fileLength = fileLength;
         }
 
-        protected static ValidationFile read(Element fileElement) {
+        protected static ValidationFile read(Element fileElement) throws InvalidFormatException {
             if (fileElement == null) {
-                return null;
+                throw new NullPointerException();
             }
 
-            NodeList _pathNodeList = fileElement.getElementsByTagName("path");
-            if (_pathNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _pathElement = (Element) _pathNodeList.item(0);
-
-            NodeList _checksumNodeList = fileElement.getElementsByTagName("checksum");
-            if (_checksumNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _checksumElement = (Element) _checksumNodeList.item(0);
-
-            NodeList _lengthNodeList = fileElement.getElementsByTagName("length");
-            if (_lengthNodeList.getLength() == 0) {
-                return null;
-            }
-            Element _lengthElement = (Element) _lengthNodeList.item(0);
-
-            String _path = _pathElement.getTextContent();
-            String _checksum = _checksumElement.getTextContent();
-            String _length = _lengthElement.getTextContent();
+            String _path = XMLUtil.getTextContent(fileElement, "path", true);
+            String _checksum = XMLUtil.getTextContent(fileElement, "checksum", true);
+            String _length = XMLUtil.getTextContent(fileElement, "length", true);
 
             return new ValidationFile(_path, _checksum, _length);
         }
@@ -553,7 +401,10 @@ public class Patch {
         fin.read(content);
         fin.close();
 
-        Patch update = Patch.read(content);
-        System.out.println(update.output());
+        try {
+            Patch update = Patch.read(content);
+            System.out.println(update.output());
+        } catch (InvalidFormatException ex) {
+        }
     }
 }
