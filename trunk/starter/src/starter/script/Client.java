@@ -24,9 +24,9 @@ public class Client {
     protected Information information;
     protected long lastUpdated;
     protected String publicKey;
-    protected List<Patch> patches;
+    protected List<Update> updates;
 
-    public Client(String version, String catalogUrl, String jarPath, String mainClass, String storagePath, Information information, long lastUpdated, String publicKey, List<Patch> patches) {
+    public Client(String version, String catalogUrl, String jarPath, String mainClass, String storagePath, Information information, long lastUpdated, String publicKey, List<Update> updates) {
         this.version = version;
         this.catalogUrl = catalogUrl;
         this.jarPath = jarPath;
@@ -35,7 +35,7 @@ public class Client {
         this.information = information;
         this.lastUpdated = lastUpdated;
         this.publicKey = publicKey;
-        this.patches = new ArrayList<Patch>(patches);
+        this.updates = new ArrayList<Update>(updates);
     }
 
     public String getVersion() {
@@ -102,12 +102,12 @@ public class Client {
         this.publicKey = publicKey;
     }
 
-    public List<Patch> getPatches() {
-        return new ArrayList<Patch>(patches);
+    public List<Update> getUpdates() {
+        return new ArrayList<Update>(updates);
     }
 
-    public void setPatches(List<Patch> patches) {
-        this.patches = new ArrayList<Patch>(patches);
+    public void setUpdates(List<Update> updates) {
+        this.updates = new ArrayList<Update>(updates);
     }
 
     public static Client read(byte[] content) throws InvalidFormatException {
@@ -132,17 +132,17 @@ public class Client {
 
         String _publicKey = XMLUtil.getTextContent(_rootNode, "public-key", false);
 
-        List<Patch> _patches = new ArrayList<Patch>();
-        Element _patchesElement = XMLUtil.getElement(_rootNode, "patches", false);
-        if (_patchesElement != null) {
-            NodeList _patchNodeList = _patchesElement.getElementsByTagName("patch");
-            for (int i = 0, iEnd = _patchNodeList.getLength(); i < iEnd; i++) {
-                Element _patchNode = (Element) _patchNodeList.item(i);
-                _patches.add(Patch.read(_patchNode));
+        List<Update> _updates = new ArrayList<Update>();
+        Element _updatesElement = XMLUtil.getElement(_rootNode, "updates", false);
+        if (_updatesElement != null) {
+            NodeList _updateNodeList = _updatesElement.getElementsByTagName("update");
+            for (int i = 0, iEnd = _updateNodeList.getLength(); i < iEnd; i++) {
+                Element _updateNode = (Element) _updateNodeList.item(i);
+                _updates.add(Update.read(_updateNode));
             }
         }
 
-        return new Client(_version, _catalogUrl, _jarPath, _mainClass, _storagePath, _information, _lastUpdated, _publicKey, _patches);
+        return new Client(_version, _catalogUrl, _jarPath, _mainClass, _storagePath, _information, _lastUpdated, _publicKey, _updates);
     }
 
     public String output() {
@@ -177,30 +177,60 @@ public class Client {
         Element informationElement = information.getElement(doc);
         rootElement.appendChild(informationElement);
 
-        Element patchesElement = doc.createElement("patches");
-        rootElement.appendChild(patchesElement);
-        for (Patch patch : patches) {
-            Element _patchElement = patch.getElement(doc);
-            if (_patchElement != null) {
-                patchesElement.appendChild(_patchElement);
+        Element updatesElement = doc.createElement("updates");
+        rootElement.appendChild(updatesElement);
+        for (Update update : updates) {
+            Element _updateElement = update.getElement(doc);
+            if (_updateElement != null) {
+                updatesElement.appendChild(_updateElement);
             }
         }
 
         return XMLUtil.getOutput(doc);
     }
 
-    public static class Patch {
+    public static class Update {
 
+        protected int id;
+        protected String versionFrom;
+        protected String versionTo;
         protected String path;
         protected String encryptionType;
         protected String encryptionKey;
         protected String encryptionIV;
 
-        public Patch(String path, String encryptionType, String encryptionKey, String encryptionIV) {
+        public Update(int id, String versionFrom, String versionTo, String path, String encryptionType, String encryptionKey, String encryptionIV) {
+            this.id = id;
+            this.versionFrom = versionFrom;
+            this.versionTo = versionTo;
             this.path = path;
             this.encryptionType = encryptionType;
             this.encryptionKey = encryptionKey;
             this.encryptionIV = encryptionIV;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getVersionFrom() {
+            return versionFrom;
+        }
+
+        public void setVersionFrom(String versionFrom) {
+            this.versionFrom = versionFrom;
+        }
+
+        public String getVersionTo() {
+            return versionTo;
+        }
+
+        public void setVersionTo(String versionTo) {
+            this.versionTo = versionTo;
         }
 
         public String getPath() {
@@ -235,29 +265,60 @@ public class Client {
             this.encryptionIV = encryptionIV;
         }
 
-        protected static Patch read(Element patchElement) throws InvalidFormatException {
-            if (patchElement == null) {
+        protected static Update read(Element updateElement) throws InvalidFormatException {
+            if (updateElement == null) {
                 throw new NullPointerException();
             }
 
-            String _path = XMLUtil.getTextContent(patchElement, "path", true);
+            int _id = 0;
+            try {
+                _id = Integer.parseInt(updateElement.getAttribute("id"));
+            } catch (Exception ex) {
+                throw new InvalidFormatException("attribute 'id' for 'update' element not exist");
+            }
+
+            Element _versionElement = XMLUtil.getElement(updateElement, "version", true);
+            String _versionFrom = XMLUtil.getTextContent(_versionElement, "from", true);
+            String _versionTo = XMLUtil.getTextContent(_versionElement, "to", true);
+
+
+            Element _patchElement = XMLUtil.getElement(updateElement, "patch", true);
+
+            String _path = XMLUtil.getTextContent(_patchElement, "path", true);
 
             String _encryptionType = null;
             String _encryptionKey = null;
             String _encryptionIV = null;
 
-            Element _encryptionElement = XMLUtil.getElement(patchElement, "encryption", false);
+            Element _encryptionElement = XMLUtil.getElement(_patchElement, "encryption", false);
             if (_encryptionElement != null) {
                 _encryptionType = XMLUtil.getTextContent(_encryptionElement, "type", true);
                 _encryptionKey = XMLUtil.getTextContent(_encryptionElement, "key", true);
                 _encryptionIV = XMLUtil.getTextContent(_encryptionElement, "IV", true);
             }
 
-            return new Patch(_path, _encryptionType, _encryptionKey, _encryptionIV);
+            return new Update(_id, _versionFrom, _versionTo, _path, _encryptionType, _encryptionKey, _encryptionIV);
         }
 
         protected Element getElement(Document doc) {
+            Element _update = doc.createElement("update");
+            _update.setAttribute("id", Integer.toString(id));
+
+
+            Element _version = doc.createElement("version");
+            _update.appendChild(_version);
+
+            Element _versionFrom = doc.createElement("from");
+            _versionFrom.appendChild(doc.createTextNode(versionFrom));
+            _version.appendChild(_versionFrom);
+
+            Element _versionTo = doc.createElement("to");
+            _versionTo.appendChild(doc.createTextNode(versionTo));
+            _version.appendChild(_versionTo);
+
+
             Element _patch = doc.createElement("patch");
+            _update.appendChild(_patch);
 
             Element _path = doc.createElement("path");
             _path.appendChild(doc.createTextNode(path));
@@ -280,7 +341,7 @@ public class Client {
                 _encryption.appendChild(_encryptionIV);
             }
 
-            return _patch;
+            return _update;
         }
     }
 

@@ -16,16 +16,26 @@ import starter.util.XMLUtil;
  */
 public class Patch {
 
+    protected int id;
     protected String versionFrom;
     protected String versionTo;
     protected List<Operation> operations;
     protected List<ValidationFile> validations;
 
-    public Patch(String versionFrom, String versionTo, List<Operation> operations, List<ValidationFile> validations) {
+    public Patch(int id, String versionFrom, String versionTo, List<Operation> operations, List<ValidationFile> validations) {
+        this.id = id;
         this.versionFrom = versionFrom;
         this.versionTo = versionTo;
         this.operations = new ArrayList<Operation>(operations);
         this.validations = new ArrayList<ValidationFile>(validations);
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getVersionFrom() {
@@ -68,6 +78,13 @@ public class Patch {
 
         Element _updateNode = doc.getDocumentElement();
 
+        int _id = 0;
+        try {
+            _id = Integer.parseInt(_updateNode.getAttribute("id"));
+        } catch (Exception ex) {
+            throw new InvalidFormatException("attribute 'id' for 'update' element not exist");
+        }
+
         Element _versionElement = XMLUtil.getElement(_updateNode, "version", true);
         String _versionFrom = XMLUtil.getTextContent(_versionElement, "from", true);
         String _versionTo = XMLUtil.getTextContent(_versionElement, "to", true);
@@ -88,7 +105,7 @@ public class Patch {
             _validations.add(ValidationFile.read(_validationFileNode));
         }
 
-        return new Patch(_versionFrom, _versionTo, _operations, _validations);
+        return new Patch(_id, _versionFrom, _versionTo, _operations, _validations);
     }
 
     public String output() {
@@ -98,6 +115,7 @@ public class Patch {
         }
 
         Element rootElement = doc.createElement("update");
+        rootElement.setAttribute("id", Integer.toString(id));
         doc.appendChild(rootElement);
 
         Element versionElement = doc.createElement("version");

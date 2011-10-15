@@ -15,7 +15,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import starter.gui.UpdaterWindow;
 import starter.script.Client;
-import starter.script.Client.Patch;
+import starter.script.Client.Update;
 import starter.patch.PatchLogReader.UnfinishedPatch;
 import starter.util.Util;
 
@@ -27,7 +27,7 @@ public class Updater {
     protected Updater() {
     }
 
-    protected static int getPatchStartIndex(Patch patch, PatchLogReader patchLogReader) {
+    protected static int getPatchStartIndex(Update patch, PatchLogReader patchLogReader) {
         if (patchLogReader == null) {
             return 0;
         }
@@ -43,8 +43,8 @@ public class Updater {
     public static UpdateResult update(File clientScriptFile, Client clientScript, File tempDir, String windowTitle, Image windowIcon, String title, Image icon) {
         UpdateResult returnResult = new UpdateResult(true, false);
 
-        List<Patch> patches = clientScript.getPatches();
-        if (patches.isEmpty()) {
+        List<Update> updates = clientScript.getUpdates();
+        if (updates.isEmpty()) {
             return new UpdateResult(true, true);
         }
 
@@ -84,9 +84,9 @@ public class Updater {
 
                 List<String> finishedPatches = patchLogReader.getfinishedPatches();
                 for (String finishedPatch : finishedPatches) {
-                    Iterator<Patch> iterator = patches.iterator();
+                    Iterator<Update> iterator = updates.iterator();
                     while (iterator.hasNext()) {
-                        Patch _patch = iterator.next();
+                        Update _patch = iterator.next();
                         if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
                             rewriteClientXML = true;
                             iterator.remove();
@@ -95,11 +95,11 @@ public class Updater {
                 }
 
                 if (rewriteClientXML) {
-                    clientScript.setPatches(patches);
+                    clientScript.setUpdates(updates);
                     saveClientScript(clientScriptFile, clientScript, tempDir);
                 }
 
-                if (patches.isEmpty()) {
+                if (updates.isEmpty()) {
                     return new UpdateResult(true, true);
                 }
             }
@@ -124,18 +124,19 @@ public class Updater {
             updaterGUI.setProgress(3);
             updaterGUI.setMessage("Starting ...");
             // iterate patches and do patch
-            final float stepSize = 97F / (float) patches.size();
+            final float stepSize = 97F / (float) updates.size();
             int count = -1;
-            Iterator<Patch> iterator = patches.iterator();
+            Iterator<Update> iterator = updates.iterator();
             while (iterator.hasNext()) {
                 count++;
-                Patch _patch = iterator.next();
+                Update _update = iterator.next();
 
                 // temporary storage folder for this patch
-                if (!Util.makeDir(tempDir.getAbsolutePath() + "/" + count)) {
+                String tempDirPath = tempDir.getAbsolutePath() + "/" + _update.getId();
+                if (!Util.makeDir(tempDirPath)) {
                     throw new Exception("Failed to create folder for patches.");
                 }
-                File tempDirForPatch = new File(tempDir.getAbsolutePath() + "/" + count);
+                File tempDirForPatch = new File(tempDirPath);
 
                 // initialize patcher
                 final int _count = count;
@@ -157,17 +158,17 @@ public class Updater {
                     public void patchEnableCancel(boolean enable) {
                         updaterGUI.setEnableCancel(enable);
                     }
-                }, patchActionLogWriter, new File(_patch.getPath()), tempDirForPatch);
+                }, patchActionLogWriter, new File(_update.getPath()), tempDirForPatch);
 
                 // patch
-                if (!_patcher.doPatch(getPatchStartIndex(_patch, patchLogReader))) {
+                if (!_patcher.doPatch(getPatchStartIndex(_update, patchLogReader))) {
                     throw new Exception("Do patch failed.");
                 } else { // patch succeed
                     // remove from patches list
                     iterator.remove();
 
                     // save the client scirpt
-                    clientScript.setPatches(patches);
+                    clientScript.setUpdates(updates);
                     saveClientScript(clientScriptFile, clientScript, tempDir);
 
                     Util.truncateFolder(tempDirForPatch);

@@ -2,6 +2,8 @@ package starter.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilder;
@@ -14,6 +16,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import starter.script.InvalidFormatException;
 
@@ -26,7 +29,19 @@ public class XMLUtil {
     }
 
     public static NodeList getNodeList(Element element, String tagName, int minSize, int maxSize) throws InvalidFormatException {
-        NodeList nodeList = element.getElementsByTagName(tagName);
+        List<Node> nodeArrayList = new ArrayList<Node>();
+        NodeList _nodeList = element.getChildNodes();
+        for (int i = 0, iEnd = _nodeList.getLength(); i < iEnd; i++) {
+            Node node = _nodeList.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element _element = (Element) node;
+                if (_element.getTagName().equals(tagName)) {
+                    nodeArrayList.add(node);
+                }
+            }
+        }
+
+        NodeList nodeList = new XMLElementNodeList(nodeArrayList);
         if ((minSize != -1 && nodeList.getLength() < minSize) || (maxSize != -1 && nodeList.getLength() > maxSize)) {
             throw new InvalidFormatException();
         }
@@ -86,5 +101,24 @@ public class XMLUtil {
             Logger.getLogger(XMLUtil.class.getName()).log(Level.SEVERE, null, ex);
         }
         return doc;
+    }
+
+    public static class XMLElementNodeList implements NodeList {
+
+        protected List<Node> nodeList;
+
+        protected XMLElementNodeList(List<Node> nodeList) {
+            this.nodeList = new ArrayList<Node>(nodeList);
+        }
+
+        @Override
+        public Node item(int index) {
+            return index >= nodeList.size() ? null : nodeList.get(index);
+        }
+
+        @Override
+        public int getLength() {
+            return nodeList.size();
+        }
     }
 }
