@@ -14,14 +14,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,22 +29,23 @@ import updater.util.Util;
  */
 public class RemoteContent {
 
-    private RemoteContent() {
+    protected RemoteContent() {
     }
 
-    public static GetCatalogResult getCatalog(String url, long lastUpdateDate, RSAPublicKey key) throws MalformedURLException {
-        GetCatalogResult returnResult = null;
-
-        URL urlObj = new URL(url);
+    public static GetCatalogResult getCatalog(String url, long lastUpdateDate, RSAPublicKey key) {
+        GetCatalogResult returnResult = new GetCatalogResult(null, false);
 
         InputStream in = null;
         HttpURLConnection httpConn = null;
         try {
+            URL urlObj = new URL(url);
+
             URLConnection conn = urlObj.openConnection();
             if (!(conn instanceof HttpURLConnection)) {
                 throw new MalformedURLException("It is not a valid http URL.");
             }
             httpConn = (HttpURLConnection) conn;
+
             httpConn.setRequestProperty("Connection", "close");
             httpConn.setRequestProperty("Accept-Encoding", "gzip");
             httpConn.setRequestProperty("User-Agent", "Software Updater");
@@ -61,13 +56,11 @@ public class RemoteContent {
 
             httpConn.connect();
 
-            if (httpConn.getResponseCode() != 200) {
-                returnResult = new GetCatalogResult(null, false);
-                throw new Exception();
-            }
             if (httpConn.getResponseCode() == 304) {
-                returnResult = new GetCatalogResult(null, true);
-                throw new Exception();
+                return new GetCatalogResult(null, true);
+            } else if (httpConn.getResponseCode() != 200) {
+                returnResult = new GetCatalogResult(null, false);
+                throw new Exception("HTTP status not 200.");
             }
 
             int contentLength = -1;
@@ -77,6 +70,7 @@ public class RemoteContent {
                 try {
                     contentLength = Integer.parseInt(contentLengthString.trim());
                 } catch (Exception ex) {
+                    // ignore
                 }
             }
             //</editor-fold>
@@ -84,19 +78,8 @@ public class RemoteContent {
             String contentEncoding = httpConn.getHeaderField("Content-Encoding");
 
             in = httpConn.getInputStream();
-            if (contentEncoding != null && contentEncoding.equals("gzip")) {
-                in = new GZIPInputStream(in, 8192);
-            } else {
-                in = new BufferedInputStream(in);
-            }
-
-            ByteArrayOutputStream buffer;
-            if (contentLength == -1) {
-                buffer = new ByteArrayOutputStream();
-            } else {
-                buffer = new ByteArrayOutputStream(contentLength);
-            }
-
+            in = (contentEncoding != null && contentEncoding.equals("gzip")) ? new GZIPInputStream(in, 8192) : new BufferedInputStream(in);
+            ByteArrayOutputStream buffer = contentLength == -1 ? new ByteArrayOutputStream() : new ByteArrayOutputStream(contentLength);
             int byteRead;
             byte[] b = new byte[contentLength == -1 ? 1024 : Math.min(contentLength, 1024)];
             while ((byteRead = in.read(b)) != -1) {
@@ -112,7 +95,7 @@ public class RemoteContent {
 
                 int maxContentLength = key.getMaxContentLength();
                 if (content.length % maxContentLength != 0) {
-                    throw new Exception();
+                    throw new Exception("RSA block size not match.");
                 }
 
                 for (int i = 0, iEnd = content.length; i < iEnd; i += maxContentLength) {
@@ -141,69 +124,33 @@ public class RemoteContent {
         return returnResult;
     }
 
-    public static class GetCatalogResult {
-
-        private Catalog catalog;
-        private boolean notModified;
-
-        public GetCatalogResult(Catalog catalog, boolean notModified) {
-            this.catalog = catalog;
-            this.notModified = notModified;
-        }
-
-        public Catalog getCatalog() {
-            return catalog;
-        }
-
-        public boolean isNotModified() {
-            return notModified;
-        }
-    }
-
-    public static class RSAPublicKey {
-
-        private BigInteger mod;
-        private BigInteger exp;
-
-        public RSAPublicKey(BigInteger mod, BigInteger exp) {
-            this.mod = mod;
-            this.exp = exp;
-        }
-
-        public PublicKey getKey() {
-            try {
-                RSAPublicKeySpec keySpec = new RSAPublicKeySpec(mod, exp);
-                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-                return keyFactory.generatePublic(keySpec);
-            } catch (InvalidKeySpecException ex) {
-                Logger.getLogger(RemoteContent.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (NoSuchAlgorithmException ex) {
-                Logger.getLogger(RemoteContent.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            return null;
-        }
-
-        public int getMaxContentLength() {
-            return (mod.bitLength() / 8) - 11;
-        }
-    }
-
-    public static boolean getPatch(String url, File file, String sha1, int length) throws MalformedURLException {
+    public static boolean getPatch(GetPatchListener listener, String url, File saveToFile, String fileSHA1, int expectedLength) {
         boolean returnResult = false;
-
-        URL urlObj = new URL(url);
 
         InputStream in = null;
         HttpURLConnection httpConn = null;
         OutputStream fout = null;
         try {
-            long fileLength = file.length();
+            URL urlObj = new URL(url);
+            long fileLength = saveToFile.length();
+
+            if (fileLength != 0 && expectedLength != -1) {
+                if ((fileLength == expectedLength && !Util.getSHA1(saveToFile).equals(fileSHA1))
+                        || fileLength > expectedLength) {
+                    try {
+                        new FileOutputStream(saveToFile).close();
+                    } catch (Exception ex2) {
+                        saveToFile.delete();
+                    }
+                }
+            }
 
             URLConnection conn = urlObj.openConnection();
             if (!(conn instanceof HttpURLConnection)) {
                 throw new MalformedURLException("It is not a valid http URL.");
             }
             httpConn = (HttpURLConnection) conn;
+
             httpConn.setDoInput(true);
             httpConn.setDoOutput(true);
             if (fileLength != 0) {
@@ -215,8 +162,9 @@ public class RemoteContent {
 
             httpConn.connect();
 
-            if (httpConn.getResponseCode() != 200) {
-                throw new Exception();
+            int httpStatusCode = httpConn.getResponseCode();
+            if (httpStatusCode != 200 && httpStatusCode != 206) {
+                throw new Exception("HTTP status is not 200 or 206.");
             }
 
             int contentLength = -1;
@@ -227,8 +175,8 @@ public class RemoteContent {
                     contentLength = Integer.parseInt(contentLengthString.trim());
                 } catch (Exception ex) {
                 }
-                if (length != -1 && contentLength != length) {
-                    throw new Exception();
+                if (expectedLength != -1 && contentLength != expectedLength) {
+                    throw new Exception("Length not matched.");
                 }
             }
             //</editor-fold>
@@ -236,44 +184,48 @@ public class RemoteContent {
             String contentEncoding = httpConn.getHeaderField("Content-Encoding");
 
             MessageDigest digest = null;
-            if (sha1 != null && sha1.matches("^[0-9a-f]{40}$")) {
+            if (fileSHA1 != null && fileSHA1.matches("^[0-9a-f]{40}$")) {
                 digest = MessageDigest.getInstance("SHA1");
             }
 
             in = httpConn.getInputStream();
-            if (contentEncoding != null && contentEncoding.equals("gzip")) {
-                in = new GZIPInputStream(in, 8192);
-            } else {
-                in = new BufferedInputStream(in);
-            }
+            in = (contentEncoding != null && contentEncoding.equals("gzip")) ? new GZIPInputStream(in, 8192) : new BufferedInputStream(in);
 
-            fout = new BufferedOutputStream(new FileOutputStream(file, httpConn.getResponseCode() == 206));
+            fout = new BufferedOutputStream(new FileOutputStream(saveToFile, httpStatusCode == 206));
 
-            int byteRead, byteCount = 0;
+            int byteRead, cumulateByteRead = 0;
             byte[] b = new byte[1024];
             while ((byteRead = in.read(b)) != -1) {
                 if (digest != null) {
                     digest.update(b, 0, byteRead);
                 }
                 fout.write(b, 0, byteRead);
-                byteCount += byteRead;
+                cumulateByteRead += byteRead;
+
+                if (cumulateByteRead > expectedLength) {
+                    throw new Exception("Error occurred when reading.");
+                }
+                if (listener != null) {
+                    listener.byteDownloaded(byteRead);
+                }
             }
 
-            if (length != -1 && byteCount != length) {
+            if (expectedLength != -1 && cumulateByteRead != expectedLength) {
+                // truncate 'saveToFile'
                 try {
                     fout.close();
                 } catch (Exception ex) {
                 }
                 fout = null;
                 try {
-                    new FileOutputStream(file).close();
+                    new FileOutputStream(saveToFile).close();
                 } catch (Exception ex) {
-                    file.delete();
+                    saveToFile.delete();
                 }
-                throw new Exception();
+                throw new Exception("Length not matched.");
             }
-            if (digest != null && !Util.getHexString(digest.digest()).equals(sha1)) {
-                throw new Exception();
+            if (digest != null && !Util.getHexString(digest.digest()).equals(fileSHA1)) {
+                throw new Exception("Checksum not matched.");
             }
 
             returnResult = true;
@@ -299,36 +251,62 @@ public class RemoteContent {
         return returnResult;
     }
 
+    public static interface GetPatchListener {
+
+        void byteDownloaded(int numberOfBytes);
+    }
+
+    public static class GetCatalogResult {
+
+        protected Catalog catalog;
+        protected boolean notModified;
+
+        public GetCatalogResult(Catalog catalog, boolean notModified) {
+            this.catalog = catalog;
+            this.notModified = notModified;
+        }
+
+        public Catalog getCatalog() {
+            return catalog;
+        }
+
+        public boolean isNotModified() {
+            return notModified;
+        }
+    }
+
+    public static class RSAPublicKey {
+
+        protected BigInteger mod;
+        protected BigInteger exp;
+
+        public RSAPublicKey(BigInteger mod, BigInteger exp) {
+            this.mod = mod;
+            this.exp = exp;
+        }
+
+        public PublicKey getKey() {
+            try {
+                RSAPublicKeySpec keySpec = new RSAPublicKeySpec(mod, exp);
+                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                return keyFactory.generatePublic(keySpec);
+            } catch (Exception ex) {
+                Logger.getLogger(RemoteContent.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return null;
+        }
+
+        public int getMaxContentLength() {
+            return (mod.bitLength() / 8) - 11;
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-        keyPairGenerator.initialize(2048);
-        KeyPair keyPair = keyPairGenerator.genKeyPair();
+        System.out.println(getPatch(new GetPatchListener() {
 
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        RSAPublicKeySpec publicKeySpec = keyFactory.getKeySpec(keyPair.getPublic(), RSAPublicKeySpec.class);
-        RSAPrivateKeySpec privateKeySpec = keyFactory.getKeySpec(keyPair.getPrivate(), RSAPrivateKeySpec.class);
-
-        keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
-
-        keyFactory = KeyFactory.getInstance("RSA");
-        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-        System.out.println(privateKeySpec.getModulus().bitLength());
-
-        Cipher encryptCipher = Cipher.getInstance("RSA");
-        encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
-        encryptCipher.update("testtesttestttesttesttestttesttesttestttesttesttestttesttesttestt".getBytes());
-        byte[] cipherData = encryptCipher.doFinal();
-        System.out.println(cipherData.length);
-
-        Cipher decryptCipher = Cipher.getInstance("RSA");
-        decryptCipher.init(Cipher.DECRYPT_MODE, privateKey);
-        byte[] plainData = decryptCipher.doFinal(cipherData);
-        System.out.println(plainData.length);
-
-        System.out.println(new String(plainData));
-
-//        System.out.println(getPatch("http://www.google.com.hk/images/srpr/logo3w.png", new File("out.png"), "b5da62ee593ecc0c40f470d34cae68911914b3fb"));
+            @Override
+            public void byteDownloaded(int numberOfBytes) {
+            }
+        }, "http://www.google.com.hk/images/srpr/logo3w.png", new File("out.png"), null, -1));
     }
 }

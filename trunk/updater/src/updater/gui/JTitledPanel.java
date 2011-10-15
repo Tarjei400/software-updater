@@ -1,21 +1,14 @@
 package updater.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.LayoutManager;
-import java.awt.Toolkit;
-import java.io.IOException;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.border.EmptyBorder;
-import updater.util.Util;
 
 /**
  * The titled panel for common use.
@@ -159,27 +152,5 @@ public class JTitledPanel extends JPanel {
      */
     public JPanel getFooterPanel() {
         return footerPanel;
-    }
-
-    /**
-     * For test/development purpose.
-     */
-    public static void main(String[] args) throws IOException {
-        Util.setLookAndFeel();
-
-        JTitledPanel panel = new JTitledPanel();
-        panel.setTitle("Install Update", new ImageIcon(Toolkit.getDefaultToolkit().getImage(JTitledPanel.class.getResource("/updater/logo.png"))));
-        panel.getFooterPanel().add(Box.createHorizontalGlue());
-        panel.getFooterPanel().add(new JButton("OK"));
-        panel.getFooterPanel().add(Box.createRigidArea(new Dimension(5, 5)));
-        panel.getFooterPanel().add(new JButton("Cancel"));
-        panel.getFooterPanel().add(Box.createHorizontalGlue());
-
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setContentPane(panel);
-        frame.pack();
-        frame.setLocationByPlatform(true);
-        frame.setVisible(true);
     }
 }

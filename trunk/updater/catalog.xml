@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<updates>
+    <update>
+        <version>
+            <from>1.0.0</from>
+            <to>1.0.1</to>
+        </version>
+        <patch>
+            <url>http://localhost/1.0.0_1.0.1</url>
+            <checksum>checksum</checksum>
+            <length>100</length>
+            <encryption>
+                <type>AES</type>
+                <key>key</key>
+                <IV>IV</IV>
+            </encryption>
+        </patch>
+    </update>
+    <update>
+        <version>
+            <from>1.0.1</from>
+            <to>1.0.2</to>
+        </version>
+        <patch>
+            <url>http://localhost/1.0.1_1.0.2</url>
+            <checksum>checksum</checksum>
+            <length>101</length>
+        </patch>
+    </update>
+</updates>
