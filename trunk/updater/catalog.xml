@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <updates>
-    <update>
+    <update id="1">
         <version>
             <from>1.0.0</from>
             <to>1.0.1</to>
@@ -16,7 +16,7 @@
             </encryption>
         </patch>
     </update>
-    <update>
+    <update id="2">
         <version>
             <from>1.0.1</from>
             <to>1.0.2</to>

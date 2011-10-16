@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
+import updater.script.Client;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -180,5 +181,176 @@ public class Util {
         int exp = (int) (Math.log(bytes) / Math.log(unit));
         String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
         return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    }
+
+    public static String humanReadableTimeCount(int timeInSecond, int maxDisplay) {
+        int buf = timeInSecond, count = 0;
+        StringBuilder sb = new StringBuilder();
+
+        if (buf >= 31536000) {
+            int year = buf / 31536000;
+            buf %= 31536000;
+
+            sb.append(year);
+            sb.append('y');
+
+            count++;
+        }
+        if (count < maxDisplay && buf >= 2592000) {
+            int month = buf / 2592000;
+            buf %= 2592000;
+
+            sb.append(month);
+            sb.append('m');
+
+            count++;
+        }
+        if (count < maxDisplay && buf >= 86400) {
+            int day = buf / 86400;
+            buf %= 86400;
+
+            sb.append(day);
+            sb.append('d');
+
+            count++;
+        }
+        if (count < maxDisplay && buf >= 3600) {
+            int hour = buf / 3600;
+            buf %= 3600;
+
+            sb.append(hour);
+            sb.append('h');
+
+            count++;
+        }
+        if (count < maxDisplay && buf >= 60) {
+            int minute = buf / 60;
+            buf %= 60;
+
+            sb.append(minute);
+            sb.append('m');
+
+            count++;
+        }
+        if (count < maxDisplay) {
+            sb.append(buf);
+            sb.append('s');
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * If the file is a directory, return the directory path; if the file is not a directory, return the directory path that contain the file.
+     * @param file the file
+     * @return the file parent path or null if error occurred
+     */
+    public static String getFileDirectory(File file) {
+        String returnResult = null;
+        try {
+            if (file.isDirectory()) {
+                returnResult = file.getAbsolutePath();
+            } else {
+                returnResult = getFileDirectory(file.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return returnResult;
+    }
+
+    /**
+     * Assume the filePath is a file path not a directory path.
+     * @param filePath the file path
+     * @return the file parent path
+     */
+    public static String getFileDirectory(String filePath) {
+        int pos = filePath.replace((CharSequence) File.separator, (CharSequence) "/").lastIndexOf('/');
+        if (pos != -1) {
+            return filePath.substring(0, pos);
+        }
+        return filePath;
+    }
+
+    public static GetClientScriptResult getClientScript(String inputPath) {
+        Client clientScript = null;
+        String clientScriptPath = null;
+
+        try {
+            if (inputPath != null) {
+                File inputFile = new File(inputPath);
+                if (inputFile.exists()) {
+                    if ((clientScript = Client.read(Util.readFile(inputFile))) != null) {
+                        return new GetClientScriptResult(clientScript, inputFile.getAbsolutePath());
+                    }
+                }
+            }
+
+
+            byte[] configPathByte = Util.readResourceFile("/config");
+            if (configPathByte == null || configPathByte.length == 0) {
+                throw new Exception("/config not found in the jar.");
+            }
+
+            String configPath = new String(configPathByte, "US-ASCII");
+            configPath.replace("{home}", System.getProperty("user.home") + File.separator).replace("{tmp}", System.getProperty("java.io.tmpdir") + File.separator);
+
+            File configFile = new File(configPath);
+            File newConfigFile = new File(Util.getFileDirectory(configFile) + File.separator + configFile.getName() + ".new");
+
+            if (configFile.exists()) {
+                clientScript = Client.read(Util.readFile(configFile));
+                clientScriptPath = configFile.getAbsolutePath();
+                if (newConfigFile.exists()) {
+                    if (clientScript != null) {
+                        Client newConfigClientScript = Client.read(Util.readFile(newConfigFile));
+                        if (newConfigClientScript != null) {
+                            if (Util.compareVersion(newConfigClientScript.getVersion(), clientScript.getVersion()) > 0) {
+                                configFile.delete();
+                                newConfigFile.renameTo(configFile);
+                                clientScript = newConfigClientScript;
+                                clientScriptPath = newConfigFile.getAbsolutePath();
+                            }
+                        }
+                    } else {
+                        configFile.delete();
+                        newConfigFile.renameTo(configFile);
+                        clientScript = Client.read(Util.readFile(configFile));
+                    }
+                }
+            } else {
+                if (newConfigFile.exists()) {
+                    newConfigFile.renameTo(configFile);
+                    clientScript = Client.read(Util.readFile(configFile));
+                }
+            }
+
+            if (clientScript == null) {
+                throw new Exception("Config file not found");
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return new GetClientScriptResult(clientScript, clientScriptPath);
+    }
+
+    public static class GetClientScriptResult {
+
+        protected Client clientScript;
+        protected String clientScriptPath;
+
+        protected GetClientScriptResult(Client clientScript, String clientScriptPath) {
+            this.clientScript = clientScript;
+            this.clientScriptPath = clientScriptPath;
+        }
+
+        public Client getClientScript() {
+            return clientScript;
+        }
+
+        public String getClientScriptPath() {
+            return clientScriptPath;
+        }
     }
 }

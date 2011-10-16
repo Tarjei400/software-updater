@@ -24,7 +24,9 @@ import updater.script.Catalog;
 import updater.script.Catalog.Update;
 import updater.script.Client.Information;
 import updater.script.InvalidFormatException;
+import updater.util.DownloadProgessUtil;
 import updater.util.Util;
+import updater.util.Util.GetClientScriptResult;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -35,9 +37,14 @@ public class SoftwareUpdater {
     }
 
     public static void checkForUpdates(String clientScriptPath) throws InvalidFormatException, IOException {
-        Client client = Client.read(Util.readFile(new File(clientScriptPath)));
+        Client clientScript = Client.read(Util.readFile(new File(clientScriptPath)));
+        if (clientScript != null) {
+            checkForUpdates(clientScript);
+        }
+    }
 
-        Information clientInfo = client.getInformation();
+    public static void checkForUpdates(Client clientScript) throws InvalidFormatException, IOException {
+        Information clientInfo = clientScript.getInformation();
         Image softwareIcon = clientInfo.getSoftwareIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getSoftwareIconPath())) : ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
         Image updaterIcon = clientInfo.getUpdaterIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getUpdaterIconPath())) : ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
 
@@ -54,9 +61,15 @@ public class SoftwareUpdater {
         JFrame updaterFrame = updaterGUI.getGUI();
         updaterFrame.setVisible(true);
 
+        if (!clientScript.getUpdates().isEmpty()) {
+            JOptionPane.showMessageDialog(updaterFrame, "You have to restart the application to make the update take effect.");
+            disposeWindow(updaterFrame);
+            return;
+        }
+
         Catalog catalog = null;
         try {
-            catalog = getUpdatedCatalog(client);
+            catalog = getUpdatedCatalog(clientScript);
             if (catalog == null) {
                 JOptionPane.showMessageDialog(updaterFrame, "There are no updates available.");
                 disposeWindow(updaterFrame);
@@ -69,7 +82,7 @@ public class SoftwareUpdater {
             return;
         }
 
-        List<Update> updatePatches = getPatches(catalog, client.getVersion());
+        List<Update> updatePatches = getPatches(catalog, clientScript.getVersion());
         if (updatePatches.isEmpty()) {
             JOptionPane.showMessageDialog(updaterFrame, "There are no updates available.");
             disposeWindow(updaterFrame);
@@ -78,20 +91,27 @@ public class SoftwareUpdater {
 
         final IntegerReference downloadedSize = new IntegerReference(0);
         final long totalDownloadSize = calculateTotalLength(updatePatches);
+        final DownloadProgessUtil downloadProgress = new DownloadProgessUtil();
+        downloadProgress.setTotalSize(totalDownloadSize);
         GetPatchListener listener = new GetPatchListener() {
 
             @Override
             public void byteDownloaded(int numberOfBytes) {
                 int newValue = downloadedSize.getValue() + numberOfBytes;
                 downloadedSize.setValue(newValue);
+                downloadProgress.setDownloadedSize(newValue);
                 updaterGUI.setProgress((int) ((float) downloadedSize.getValue() / (float) totalDownloadSize));
-                updaterGUI.setMessage("Downloading patches, " + Util.humanReadableByteCount(downloadedSize.getValue(), false) + "/" + Util.humanReadableByteCount(totalDownloadSize, false) + " downloaded ...");
+                // Downloading: 1.6 MiB / 240 MiB, 2.6 MiB/s, 1m32s remaining
+                updaterGUI.setMessage("Downloading: "
+                        + Util.humanReadableByteCount(downloadedSize.getValue(), false) + " / " + Util.humanReadableByteCount(totalDownloadSize, false) + ", "
+                        + Util.humanReadableByteCount(downloadProgress.getSpeed(), false) + " / s" + ", "
+                        + Util.humanReadableTimeCount(downloadProgress.getTimeRemaining(), 3) + " remaining");
             }
         };
 
         // update storage path
         for (Update update : updatePatches) {
-            boolean updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), new File(client.getStoragePath() + ""), update.getPatchChecksum(), update.getPatchLength());
+            boolean updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), new File(clientScript.getStoragePath() + ""), update.getPatchChecksum(), update.getPatchLength());
             if (!updateResult) {
                 JOptionPane.showMessageDialog(updaterFrame, "Error occurred when getting the update patch.");
                 disposeWindow(updaterFrame);
@@ -200,7 +220,7 @@ public class SoftwareUpdater {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Util.setLookAndFeel();
         try {
             JFrame frame = new JFrame();
@@ -209,15 +229,11 @@ public class SoftwareUpdater {
             frame.setLocationByPlatform(true);
             frame.setVisible(true);
 
-            if (args.length > 0) {
-                checkForUpdates(args[0]);
+            GetClientScriptResult result = Util.getClientScript(args.length > 0 ? args[0] : null);
+            if (result.getClientScript() != null) {
+                checkForUpdates(result.getClientScript());
             } else {
-                byte[] configPathByte = Util.readResourceFile("/config");
-                if (configPathByte != null && configPathByte.length != 0) {
-                    checkForUpdates(new String(configPathByte, "US-ASCII"));
-                } else {
-                    JOptionPane.showMessageDialog(null, "Config path not set and not found");
-                }
+                JOptionPane.showMessageDialog(null, "Config file not found, is empty or is invalid.");
             }
         } catch (InvalidFormatException ex) {
             Logger.getLogger(SoftwareUpdater.class.getName()).log(Level.SEVERE, null, ex);
