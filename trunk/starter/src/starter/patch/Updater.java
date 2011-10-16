@@ -96,7 +96,7 @@ public class Updater {
 
                 if (rewriteClientXML) {
                     clientScript.setUpdates(updates);
-                    saveClientScript(clientScriptFile, clientScript, tempDir);
+                    saveClientScript(clientScriptFile, clientScript);
                 }
 
                 if (updates.isEmpty()) {
@@ -130,6 +130,20 @@ public class Updater {
             while (iterator.hasNext()) {
                 count++;
                 Update _update = iterator.next();
+
+                // check if the update if not suitable
+                if (Util.compareVersion(clientScript.getVersion(), _update.getVersionFrom()) > 0) {
+                    // normally should not reach here
+                    iterator.remove();
+                    // save the client scirpt
+                    clientScript.setUpdates(updates);
+                    saveClientScript(clientScriptFile, clientScript);
+                    continue;
+                }
+                if (!_update.getVersionFrom().equals(clientScript.getVersion())) {
+                    // the 'version from' of this update dun match with current version
+                    continue;
+                }
 
                 // temporary storage folder for this patch
                 String tempDirPath = tempDir.getAbsolutePath() + "/" + _update.getId();
@@ -168,8 +182,9 @@ public class Updater {
                     iterator.remove();
 
                     // save the client scirpt
+                    clientScript.setVersion(_update.getVersionTo());
                     clientScript.setUpdates(updates);
-                    saveClientScript(clientScriptFile, clientScript, tempDir);
+                    saveClientScript(clientScriptFile, clientScript);
 
                     Util.truncateFolder(tempDirForPatch);
                     tempDirForPatch.delete();
@@ -217,8 +232,8 @@ public class Updater {
         return returnResult;
     }
 
-    protected static void saveClientScript(File clientScriptFile, Client clientScript, File tempDir) throws IOException {
-        File clientScriptTemp = new File(tempDir + "/client.xml");
+    protected static void saveClientScript(File clientScriptFile, Client clientScript) throws IOException {
+        File clientScriptTemp = new File(Util.getFileDirectory(clientScriptFile) + File.separator + clientScriptFile.getName() + ".new");
         if (!Util.writeFile(clientScriptTemp, clientScript.output()) || !clientScriptFile.delete() || !clientScriptTemp.renameTo(clientScriptFile)) {
             throw new IOException("Failed to save to script.");
         }

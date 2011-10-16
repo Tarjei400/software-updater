@@ -18,10 +18,10 @@
         </updater-icon>
     </information>
     <updates>
-        <update>
+        <update id="1">
             <version>
-                <from>1.0.0</from>
-                <to>1.0.1</to>
+                <from>1.0.2</from>
+                <to>1.0.4</to>
             </version>
             <patch>
                 <path>path</path>
@@ -32,10 +32,10 @@
                 </encryption>
             </patch>
         </update>
-        <update>
+        <update id="2">
             <version>
-                <from>1.0.0</from>
-                <to>1.0.1</to>
+                <from>1.0.4</from>
+                <to>1.0.5</to>
             </version>
             <patch>
                 <path>path2</path>

@@ -17,6 +17,7 @@ import starter.script.Client;
 import starter.patch.Updater;
 import starter.patch.Updater.UpdateResult;
 import starter.script.Client.Information;
+import starter.util.Util.GetClientScriptResult;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -36,7 +37,12 @@ public class SoftwareStarter {
     public void start(String clientScriptPath) throws IOException, InvalidFormatException, LaunchFailedException {
         File clientScript = new File(clientScriptPath);
         client = Client.read(Util.readFile(clientScript));
+        if (client != null) {
+            start(clientScript, client);
+        }
+    }
 
+    public void start(File clientScriptFile, Client client) throws IOException, InvalidFormatException, LaunchFailedException {
         jarPath = client.getJarPath();
         mainClass = client.getMainClass();
         storagePath = client.getStoragePath();
@@ -45,7 +51,7 @@ public class SoftwareStarter {
         Image softwareIcon = clientInfo.getSoftwareIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareStarter.class.getResource(clientInfo.getSoftwareIconPath())) : ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
         Image updaterIcon = clientInfo.getUpdaterIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareStarter.class.getResource(clientInfo.getUpdaterIconPath())) : ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
 
-        UpdateResult updateResult = Updater.update(clientScript, client, new File(storagePath), clientInfo.getSoftwareName(), softwareIcon, clientInfo.getUpdaterTitle(), updaterIcon);
+        UpdateResult updateResult = Updater.update(clientScriptFile, client, new File(storagePath), clientInfo.getSoftwareName(), softwareIcon, clientInfo.getUpdaterTitle(), updaterIcon);
         if (updateResult.isUpdateSucceed() || updateResult.isLaunchSoftware()) {
             startSoftware();
         }
@@ -70,15 +76,12 @@ public class SoftwareStarter {
         Util.setLookAndFeel();
         try {
             SoftwareStarter softwareStarter = new SoftwareStarter(args);
-            if (args.length > 0) {
-                softwareStarter.start(args[0]);
+
+            GetClientScriptResult result = Util.getClientScript(args.length > 0 ? args[0] : null);
+            if (result.getClientScript() != null) {
+                softwareStarter.start(new File(result.getClientScriptPath()), result.getClientScript());
             } else {
-                byte[] configPathByte = Util.readResourceFile("/config");
-                if (configPathByte != null && configPathByte.length != 0) {
-                    softwareStarter.start(new String(configPathByte, "US-ASCII"));
-                } else {
-                    JOptionPane.showMessageDialog(null, "Config file not found or is empty.");
-                }
+                JOptionPane.showMessageDialog(null, "Config file not found, is empty or is invalid.");
             }
         } catch (IOException ex) {
             Logger.getLogger(SoftwareStarter.class.getName()).log(Level.SEVERE, null, ex);
