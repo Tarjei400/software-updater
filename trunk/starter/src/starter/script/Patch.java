@@ -348,9 +348,9 @@ public class Patch {
 
         protected String filePath;
         protected String fileChecksum;
-        protected String fileLength;
+        protected int fileLength;
 
-        public ValidationFile(String filePath, String fileChecksum, String fileLength) {
+        public ValidationFile(String filePath, String fileChecksum, int fileLength) {
             this.filePath = filePath;
             this.fileChecksum = fileChecksum;
             this.fileLength = fileLength;
@@ -372,11 +372,11 @@ public class Patch {
             this.fileChecksum = fileChecksum;
         }
 
-        public String getFileLength() {
+        public int getFileLength() {
             return fileLength;
         }
 
-        public void setFileLength(String fileLength) {
+        public void setFileLength(int fileLength) {
             this.fileLength = fileLength;
         }
 
@@ -387,7 +387,7 @@ public class Patch {
 
             String _path = XMLUtil.getTextContent(fileElement, "path", true);
             String _checksum = XMLUtil.getTextContent(fileElement, "checksum", true);
-            String _length = XMLUtil.getTextContent(fileElement, "length", true);
+            int _length = Integer.parseInt(XMLUtil.getTextContent(fileElement, "length", true));
 
             return new ValidationFile(_path, _checksum, _length);
         }
@@ -404,7 +404,7 @@ public class Patch {
             _file.appendChild(_checksum);
 
             Element _length = doc.createElement("length");
-            _length.appendChild(doc.createTextNode(fileLength));
+            _length.appendChild(doc.createTextNode(Integer.toString(fileLength)));
             _file.appendChild(_length);
 
             return _file;

@@ -18,6 +18,7 @@ import org.tukaani.xz.XZInputStream;
 import starter.script.InvalidFormatException;
 import starter.script.Patch;
 import starter.script.Patch.Operation;
+import starter.script.Patch.ValidationFile;
 import starter.util.InterruptibleInputStream;
 import starter.util.InterruptibleOutputStream;
 import starter.util.SeekableFile;
@@ -104,13 +105,13 @@ public class Patcher {
         if (operation.getOldFilePath() != null) {
             // check old file checksum and length
             oldFile = new File(operation.getOldFilePath());
-            if (!Util.getSHA1(oldFile).equals(operation.getOldFileChecksum()) || oldFile.length() != operation.getOldFileLength()) {
+            if (!Util.getSHA256(oldFile).equals(operation.getOldFileChecksum()) || oldFile.length() != operation.getOldFileLength()) {
                 throw new Exception("Checksum or length does not match (old file): " + operation.getOldFilePath());
             }
         }
 
         // check if it is patched and waiting for move already
-        if (tempNewFile.exists() && Util.getSHA1(tempNewFile).equals(operation.getNewFileChecksum()) && tempNewFile.length() == operation.getNewFileLength()) {
+        if (tempNewFile.exists() && Util.getSHA256(tempNewFile).equals(operation.getNewFileChecksum()) && tempNewFile.length() == operation.getNewFileLength()) {
             return;
         }
 
@@ -200,7 +201,7 @@ public class Patcher {
         }
 
         // check new file checksum and length
-        if (!Util.getSHA1(tempNewFile).equals(operation.getNewFileChecksum()) || tempNewFile.length() != operation.getNewFileLength()) {
+        if (!Util.getSHA256(tempNewFile).equals(operation.getNewFileChecksum()) || tempNewFile.length() != operation.getNewFileLength()) {
             throw new Exception("Checksum or length does not match (new file): " + tempNewFile.getAbsolutePath());
         }
     }
@@ -230,7 +231,7 @@ public class Patcher {
         for (int i = startFromFileIndex, iEnd = operations.size(); i < iEnd; i++) {
             Operation _operation = operations.get(i);
 
-            log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchLogWriter.Action.START, _operation.getOldFilePath(), _operation.getNewFilePath());
+            log.logPatch(PatchLogWriter.Action.START, i, PatchLogWriter.OperationType.get(_operation.getType()), _operation.getOldFilePath(), _operation.getNewFilePath());
 
             if (_operation.getType().equals("remove")) {
                 listener.patchProgress((int) progress, "Removing " + _operation.getOldFilePath() + " ...");
@@ -246,7 +247,7 @@ public class Patcher {
                 new File(tempDir + File.separator + i).renameTo(new File(_operation.getNewFilePath()));
             }
 
-            log.logPatch(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo(), i, PatchLogWriter.Action.FINISH, _operation.getOldFilePath(), _operation.getNewFilePath());
+            log.logPatch(PatchLogWriter.Action.FINISH, i, PatchLogWriter.OperationType.get(_operation.getType()), _operation.getOldFilePath(), _operation.getNewFilePath());
             progress += progressStep;
         }
     }
@@ -268,15 +269,16 @@ public class Patcher {
             Patch patch = getXML(decompressedPatchIn); // xml
 
             List<Operation> operations = patch.getOperations();
+            List<ValidationFile> validations = patch.getValidations();
 
             // start log
-            log.logStart(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo());
+            log.logStart(patch.getId(), patch.getVersionFrom(), patch.getVersionTo());
 
             progress = 5;
             listener.patchProgress((int) progress, "Updating ...");
             listener.patchEnableCancel(true);
             // start patch - patch files and store to temporary directory first
-            float progressStep = 90.0F / (float) operations.size();
+            float progressStep = 70.0F / (float) operations.size();
             progress += startFromFileIndex * progressStep;
             for (int i = startFromFileIndex, iEnd = operations.size(); i < iEnd; i++) {
                 Operation _operation = operations.get(i);
@@ -284,18 +286,40 @@ public class Patcher {
                 progress += progressStep;
             }
 
-            progress = 95;
+            progress = 75;
             listener.patchProgress((int) progress, "Checking the accessibility of all files ...");
             // try acquire locks on all files
             tryAcquireExclusiveLocks(operations, startFromFileIndex);
 
-            progress = 96;
+            progress = 76;
             listener.patchProgress((int) progress, "Replacing old files with new files ...");
             listener.patchEnableCancel(false);
             // all files has patched to temporary directory, replace old files with the new one
             doReplacement(operations, startFromFileIndex, patchFileAbsolutePath, patch);
 
-            log.logEnd(patchFileAbsolutePath, patch.getVersionFrom(), patch.getVersionTo());
+            progress = 80;
+            listener.patchProgress((int) progress, "Validating files ...");
+            listener.patchEnableCancel(true);
+            // validate files
+            progressStep = 20.0F / (float) validations.size();
+            for (ValidationFile _validationFile : validations) {
+                listener.patchProgress((int) progress, "Validating file: " + _validationFile.getFilePath());
+
+                File _file = new File(_validationFile.getFilePath());
+                if (!_file.exists()) {
+                    throw new Exception("File missed: " + _validationFile.getFilePath());
+                }
+                if (_file.length() != _validationFile.getFileLength()) {
+                    throw new Exception("File length not matched, file: " + _validationFile.getFilePath() + ", expected: " + _validationFile.getFileLength() + ", found: " + _file.length());
+                }
+                if (Util.getSHA256(_file).equals(_validationFile.getFileChecksum())) {
+                    throw new Exception("File checksum incorrect: " + _validationFile.getFilePath());
+                }
+
+                progress += progressStep;
+            }
+
+            log.logEnd();
         } catch (Exception ex) {
             returnResult = false;
             Logger.getLogger(Patcher.class.getName()).log(Level.SEVERE, null, ex);

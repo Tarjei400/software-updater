@@ -72,6 +72,7 @@ public class InterruptibleInputStream extends FilterInputStream {
         int result = in.read(b, off, len);
         if (sizeAvailable != -1 && result != -1) {
             if (result > sizeAvailable) {
+                // error
                 sizeAvailable = 0;
             } else {
                 sizeAvailable -= result;
@@ -91,6 +92,7 @@ public class InterruptibleInputStream extends FilterInputStream {
         long result = in.skip(n);
         if (sizeAvailable != -1 && result != -1) {
             if (result > sizeAvailable) {
+                // error
                 sizeAvailable = 0;
             } else {
                 sizeAvailable -= result;

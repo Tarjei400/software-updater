@@ -4,6 +4,7 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileLock;
@@ -18,6 +19,10 @@ import starter.script.Client;
 import starter.script.Client.Update;
 import starter.patch.PatchLogReader.UnfinishedPatch;
 import starter.util.Util;
+import watne.seis720.project.KeySize;
+import watne.seis720.project.Mode;
+import watne.seis720.project.Padding;
+import watne.seis720.project.WatneAES_Implementer;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -33,7 +38,7 @@ public class Updater {
         }
         UnfinishedPatch unfinishedPatch = patchLogReader.getUnfinishedPatch();
         if (unfinishedPatch != null) {
-            if (new File(patch.getPath()).getAbsolutePath().equals(unfinishedPatch.getPatchPath())) {
+            if (patch.getId() == unfinishedPatch.getPatchId()) {
                 return unfinishedPatch.getFileIndex();
             }
         }
@@ -82,12 +87,12 @@ public class Updater {
             if (patchLogReader != null) {
                 boolean rewriteClientXML = false;
 
-                List<String> finishedPatches = patchLogReader.getfinishedPatches();
-                for (String finishedPatch : finishedPatches) {
+                List<Integer> finishedPatches = patchLogReader.getfinishedPatches();
+                for (Integer finishedPatch : finishedPatches) {
                     Iterator<Update> iterator = updates.iterator();
                     while (iterator.hasNext()) {
                         Update _patch = iterator.next();
-                        if (new File(_patch.getPath()).getAbsolutePath().equals(finishedPatch)) {
+                        if (_patch.getId() == finishedPatch) {
                             rewriteClientXML = true;
                             iterator.remove();
                         }
@@ -151,6 +156,20 @@ public class Updater {
                     throw new Exception("Failed to create folder for patches.");
                 }
                 File tempDirForPatch = new File(tempDirPath);
+
+                // need modification to allow cancel or make it an output stream
+                updaterGUI.setEnableCancel(false);
+                updaterGUI.setMessage("Decrypting patch ...");
+                if (_update.getEncryptionKey() != null) {
+                    WatneAES_Implementer aesCipher = new WatneAES_Implementer();
+                    aesCipher.setMode(Mode.CBC);
+                    aesCipher.setPadding(Padding.PKCS5PADDING);
+                    aesCipher.setKeySize(KeySize.BITS256);
+                    aesCipher.setKey(Util.hexStringToByteArray(_update.getEncryptionKey()));
+                    aesCipher.setInitializationVector(Util.hexStringToByteArray(_update.getEncryptionIV()));
+                    aesCipher.decryptFile(new File(_update.getPath()), new File(_update.getPath() + ".decrypted"));
+                }
+                updaterGUI.setEnableCancel(true);
 
                 // initialize patcher
                 final int _count = count;
