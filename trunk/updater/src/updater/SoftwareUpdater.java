@@ -48,12 +48,14 @@ public class SoftwareUpdater {
         Image softwareIcon = clientInfo.getSoftwareIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getSoftwareIconPath())) : ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
         Image updaterIcon = clientInfo.getUpdaterIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getUpdaterIconPath())) : ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
 
+        final Thread currentThread = Thread.currentThread();
         final UpdaterWindow updaterGUI = new UpdaterWindow(clientInfo.getSoftwareName(), softwareIcon, clientInfo.getUpdaterTitle(), updaterIcon);
         updaterGUI.addListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
                 updaterGUI.setEnableCancel(false);
+                currentThread.interrupt();
             }
         });
         updaterGUI.setProgress(0);
@@ -111,8 +113,11 @@ public class SoftwareUpdater {
 
         // update storage path
         for (Update update : updatePatches) {
-            boolean updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), new File(clientScript.getStoragePath() + ""), update.getPatchChecksum(), update.getPatchLength());
+            File saveToFile = new File(clientScript.getStoragePath() + update.getId() + ".patch");
+            // add: if download failed and saveToFile is not empty, delete it and download again
+            boolean updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), saveToFile, update.getPatchChecksum(), update.getPatchLength());
             if (!updateResult) {
+                saveToFile.delete();
                 JOptionPane.showMessageDialog(updaterFrame, "Error occurred when getting the update patch.");
                 disposeWindow(updaterFrame);
                 return;
@@ -120,7 +125,8 @@ public class SoftwareUpdater {
         }
 
         updaterGUI.setProgress(100);
-        updaterGUI.setMessage("You have to restart the application to make the update take effect.");
+        updaterGUI.setMessage("Finished");
+        JOptionPane.showMessageDialog(updaterFrame, "You have to restart the application to make the update take effect.");
         disposeWindow(updaterFrame);
     }
 

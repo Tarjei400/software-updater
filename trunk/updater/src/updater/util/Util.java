@@ -26,7 +26,7 @@ public class Util {
         (byte) 'c', (byte) 'd', (byte) 'e', (byte) 'f'
     };
 
-    public static String getHexString(byte[] raw) {
+    public static String byteArrayToHexString(byte[] raw) {
         byte[] hex = new byte[2 * raw.length];
         int index = 0;
 
@@ -47,13 +47,13 @@ public class Util {
         return result;
     }
 
-    public static String getSHA1(File file) {
+    public static String getSHA256(File file) {
         String returnResult = null;
 
         InputStream fin = null;
         try {
             fin = new FileInputStream(file);
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA1");
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
 
             int byteRead, cumulateByteRead = 0;
             byte[] b = new byte[8096];
@@ -65,7 +65,7 @@ public class Util {
             if (cumulateByteRead != file.length()) {
                 throw new Exception("The total number of bytes read does not match the file size: " + file.getAbsolutePath());
             }
-            returnResult = getHexString(messageDigest.digest());
+            returnResult = byteArrayToHexString(messageDigest.digest());
         } catch (Exception ex) {
             returnResult = null;
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
@@ -289,7 +289,7 @@ public class Util {
 
             byte[] configPathByte = Util.readResourceFile("/config");
             if (configPathByte == null || configPathByte.length == 0) {
-                throw new Exception("/config not found in the jar.");
+                throw new Exception("'/config' not found in the jar.");
             }
 
             String configPath = new String(configPathByte, "US-ASCII");
