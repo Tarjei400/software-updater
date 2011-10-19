@@ -4,7 +4,6 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileLock;
@@ -32,21 +31,19 @@ public class Updater {
     protected Updater() {
     }
 
-    protected static int getPatchStartIndex(Update patch, PatchLogReader patchLogReader) {
+    protected static int getPatchStartIndex(Update update, PatchLogReader patchLogReader) {
         if (patchLogReader == null) {
             return 0;
         }
         UnfinishedPatch unfinishedPatch = patchLogReader.getUnfinishedPatch();
-        if (unfinishedPatch != null) {
-            if (patch.getId() == unfinishedPatch.getPatchId()) {
-                return unfinishedPatch.getFileIndex();
-            }
+        if (unfinishedPatch != null && unfinishedPatch.getPatchId() == update.getId()) {
+            return unfinishedPatch.getFileIndex();
         }
         return 0;
     }
 
     public static UpdateResult update(File clientScriptFile, Client clientScript, File tempDir, String windowTitle, Image windowIcon, String title, Image icon) {
-        UpdateResult returnResult = new UpdateResult(true, false);
+        UpdateResult returnResult = new UpdateResult(false, false);
 
         List<Update> updates = clientScript.getUpdates();
         if (updates.isEmpty()) {
@@ -101,7 +98,7 @@ public class Updater {
 
                 if (rewriteClientXML) {
                     clientScript.setUpdates(updates);
-                    saveClientScript(clientScriptFile, clientScript);
+                    Util.saveClientScript(clientScriptFile, clientScript);
                 }
 
                 if (updates.isEmpty()) {
@@ -142,11 +139,12 @@ public class Updater {
                     iterator.remove();
                     // save the client scirpt
                     clientScript.setUpdates(updates);
-                    saveClientScript(clientScriptFile, clientScript);
+                    Util.saveClientScript(clientScriptFile, clientScript);
                     continue;
                 }
                 if (!_update.getVersionFrom().equals(clientScript.getVersion())) {
                     // the 'version from' of this update dun match with current version
+                    // normally should not happen
                     continue;
                 }
 
@@ -156,6 +154,12 @@ public class Updater {
                     throw new Exception("Failed to create folder for patches.");
                 }
                 File tempDirForPatch = new File(tempDirPath);
+
+                File patchFile = new File(_update.getPath());
+                File decryptedPatchFile = new File(_update.getPath() + ".decrypted");
+                if (!patchFile.exists() && decryptedPatchFile.exists()) {
+                    decryptedPatchFile.renameTo(patchFile);
+                }
 
                 // need modification to allow cancel or make it an output stream
                 updaterGUI.setEnableCancel(false);
@@ -167,7 +171,9 @@ public class Updater {
                     aesCipher.setKeySize(KeySize.BITS256);
                     aesCipher.setKey(Util.hexStringToByteArray(_update.getEncryptionKey()));
                     aesCipher.setInitializationVector(Util.hexStringToByteArray(_update.getEncryptionIV()));
-                    aesCipher.decryptFile(new File(_update.getPath()), new File(_update.getPath() + ".decrypted"));
+                    aesCipher.decryptFile(patchFile, decryptedPatchFile);
+                    patchFile.delete();
+                    decryptedPatchFile.renameTo(patchFile);
                 }
                 updaterGUI.setEnableCancel(true);
 
@@ -191,22 +197,26 @@ public class Updater {
                     public void patchEnableCancel(boolean enable) {
                         updaterGUI.setEnableCancel(enable);
                     }
-                }, patchActionLogWriter, new File(_update.getPath()), tempDirForPatch);
+                }, patchActionLogWriter, patchFile, tempDirForPatch);
 
                 // patch
-                if (!_patcher.doPatch(getPatchStartIndex(_update, patchLogReader))) {
+                boolean patchResult = _patcher.doPatch(getPatchStartIndex(_update, patchLogReader));
+                _patcher.close();
+                if (!patchResult) {
                     throw new Exception("Do patch failed.");
-                } else { // patch succeed
-                    // remove from patches list
+                } else { // update succeed
+                    // remove 'update' from updates list
                     iterator.remove();
 
                     // save the client scirpt
                     clientScript.setVersion(_update.getVersionTo());
                     clientScript.setUpdates(updates);
-                    saveClientScript(clientScriptFile, clientScript);
+                    Util.saveClientScript(clientScriptFile, clientScript);
 
                     Util.truncateFolder(tempDirForPatch);
                     tempDirForPatch.delete();
+
+                    patchFile.delete();
                 }
             }
         } catch (Exception ex) {
@@ -216,11 +226,11 @@ public class Updater {
 
             if (updaterGUI.isCancelEnabled()) {
                 Object[] options = {"Launch", "Exit"};
-                int result = JOptionPane.showOptionDialog(updaterFrame, "Continue to launch the software?", "Continue action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+                int result = JOptionPane.showOptionDialog(updaterFrame, "Continue to launch the software?", "Continue Action", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
                 if (result == 0) {
                     launchSoftware = true;
                 } else {
-                    JOptionPane.showMessageDialog(updaterFrame, "You can restart the software to try to update files again.");
+                    JOptionPane.showMessageDialog(updaterFrame, "You can restart the software to try to update software again.");
                 }
             }
 
@@ -249,13 +259,6 @@ public class Updater {
         }
 
         return returnResult;
-    }
-
-    protected static void saveClientScript(File clientScriptFile, Client clientScript) throws IOException {
-        File clientScriptTemp = new File(Util.getFileDirectory(clientScriptFile) + File.separator + clientScriptFile.getName() + ".new");
-        if (!Util.writeFile(clientScriptTemp, clientScript.output()) || !clientScriptFile.delete() || !clientScriptTemp.renameTo(clientScriptFile)) {
-            throw new IOException("Failed to save to script.");
-        }
     }
 
     public static class UpdateResult {

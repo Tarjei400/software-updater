@@ -42,7 +42,7 @@ public class PatchLogReader {
     public PatchLogReader(File file) throws IOException {
         finishedPatches = new ArrayList<Integer>();
 
-        Pattern logPattern = Pattern.compile("^\\(([0-9]+)\\s(?:(1|2)|(3|4)\\s([0-9]+))\\)\t.+$");
+        Pattern logPattern = Pattern.compile("^\\(([0-9]+)\\s(?:(0|1)|(2|3)\\s([0-9]+))\\)\t.+?$");
 
         String readLine = null;
         int currentPatchId = -1, currentFileIndex = 0;

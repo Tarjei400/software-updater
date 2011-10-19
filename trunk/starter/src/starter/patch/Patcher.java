@@ -54,6 +54,16 @@ public class Patcher {
         progress = 0;
     }
 
+    public void close() {
+        if (log != null) {
+            try {
+                log.close();
+            } catch (IOException ex) {
+                Logger.getLogger(Patcher.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
     protected void checkHeader(InputStream in) throws IOException {
         if (in.read(buf, 0, 5) != 5) {
             throw new IOException("Reach the end of stream.");
@@ -64,10 +74,10 @@ public class Patcher {
     }
 
     protected InputStream getCompressionMethod(InputStream in) throws IOException {
-        if (in.read(buf, 0, 3) != 3) {
+        if (in.read(buf, 0, 1) != 1) {
             throw new IOException("Reach the end of stream.");
         }
-        int compressionMode = ((buf[0] & 0xff) << 16) | ((buf[1] & 0xff) << 8) | (buf[2] & 0xff);
+        int compressionMode = buf[0] & 0xff;
         switch (compressionMode) {
             case 0: //gzip
                 return new GZIPInputStream(in);
@@ -82,7 +92,7 @@ public class Patcher {
         if (in.read(buf, 0, 2) != 2) {
             throw new IOException("Reach the end of stream.");
         }
-        int xmlLength = ((buf[1] & 0xff) << 8) | (buf[2] & 0xff);
+        int xmlLength = ((buf[0] & 0xff) << 8) | (buf[1] & 0xff);
         byte[] xmlData = new byte[xmlLength];
         if (in.read(xmlData) != xmlLength) {
             throw new IOException("Reach the end of stream.");
@@ -105,6 +115,9 @@ public class Patcher {
         if (operation.getOldFilePath() != null) {
             // check old file checksum and length
             oldFile = new File(operation.getOldFilePath());
+            if (!oldFile.exists()) {
+                throw new Exception("Old file not exist: " + operation.getOldFilePath());
+            }
             if (!Util.getSHA256(oldFile).equals(operation.getOldFileChecksum()) || oldFile.length() != operation.getOldFileLength()) {
                 throw new Exception("Checksum or length does not match (old file): " + operation.getOldFilePath());
             }
@@ -127,6 +140,7 @@ public class Patcher {
                 randomAccessOldFile = new RandomAccessFile(oldFile, "r");
                 SeekableFile seekableRandomAccessOldFile = new SeekableFile(randomAccessOldFile);
 
+                //<editor-fold defaultstate="collapsed" desc="add interrupted tasks">
                 final OutputStream _tempNewFileOut = tempNewFileOut;
                 final InterruptibleInputStream _interruptiblePatchIn = interruptiblePatchIn;
                 final RandomAccessFile _randomAccessOldFile = randomAccessOldFile;
@@ -146,9 +160,11 @@ public class Patcher {
                 tempNewFileOut.addInterruptedTask(interruptedTask);
                 interruptiblePatchIn.addInterruptedTask(interruptedTask);
                 seekableRandomAccessOldFile.addInterruptedTask(interruptedTask);
+                //</editor-fold>
 
                 diffPatcher.patch(seekableRandomAccessOldFile, interruptiblePatchIn, tempNewFileOut);
             } else {
+                //<editor-fold defaultstate="collapsed" desc="add interrupted tasks">
                 final OutputStream _tempNewFileOut = tempNewFileOut;
                 final InterruptibleInputStream _interruptiblePatchIn = interruptiblePatchIn;
                 Runnable interruptedTask = new Runnable() {
@@ -165,6 +181,7 @@ public class Patcher {
                 };
                 tempNewFileOut.addInterruptedTask(interruptedTask);
                 interruptiblePatchIn.addInterruptedTask(interruptedTask);
+                //</editor-fold>
 
                 // replace or new
                 int byteRead, remaining = operation.getPatchLength();
@@ -175,7 +192,7 @@ public class Patcher {
 
                     int lengthToRead = buf.length > remaining ? remaining : buf.length;
                     byteRead = interruptiblePatchIn.read(buf, 0, lengthToRead);
-                    if (byteRead <= 0) {
+                    if (byteRead == -1) {
                         break;
                     }
                     tempNewFileOut.write(buf, 0, byteRead);
@@ -190,7 +207,10 @@ public class Patcher {
                     randomAccessOldFile.close();
                 }
                 if (interruptiblePatchIn != null) {
-                    patchIn.skip(interruptiblePatchIn.remaining());
+                    long byteSkipped = patchIn.skip(interruptiblePatchIn.remaining());
+                    if (byteSkipped != interruptiblePatchIn.remaining()) {
+                        throw new Exception("Failed to skip remaining bytes in 'interruptiblePatchIn'.");
+                    }
                 }
                 if (tempNewFileOut != null) {
                     tempNewFileOut.close();
@@ -224,8 +244,8 @@ public class Patcher {
         }
     }
 
-    protected void doReplacement(List<Operation> operations, int startFromFileIndex, String patchFileAbsolutePath, Patch patch) throws IOException {
-        float progressStep = 4.0F / (float) operations.size();
+    protected void doReplacement(List<Operation> operations, int startFromFileIndex, String patchFileAbsolutePath, Patch patch, float progressOccupied) throws IOException {
+        float progressStep = progressOccupied / (float) operations.size();
         progress += startFromFileIndex * progressStep;
 
         for (int i = startFromFileIndex, iEnd = operations.size(); i < iEnd; i++) {
@@ -295,11 +315,10 @@ public class Patcher {
             listener.patchProgress((int) progress, "Replacing old files with new files ...");
             listener.patchEnableCancel(false);
             // all files has patched to temporary directory, replace old files with the new one
-            doReplacement(operations, startFromFileIndex, patchFileAbsolutePath, patch);
+            doReplacement(operations, startFromFileIndex, patchFileAbsolutePath, patch, 4.0F);
 
             progress = 80;
             listener.patchProgress((int) progress, "Validating files ...");
-            listener.patchEnableCancel(true);
             // validate files
             progressStep = 20.0F / (float) validations.size();
             for (ValidationFile _validationFile : validations) {
@@ -312,7 +331,7 @@ public class Patcher {
                 if (_file.length() != _validationFile.getFileLength()) {
                     throw new Exception("File length not matched, file: " + _validationFile.getFilePath() + ", expected: " + _validationFile.getFileLength() + ", found: " + _file.length());
                 }
-                if (Util.getSHA256(_file).equals(_validationFile.getFileChecksum())) {
+                if (!Util.getSHA256(_file).equals(_validationFile.getFileChecksum())) {
                     throw new Exception("File checksum incorrect: " + _validationFile.getFilePath());
                 }
 

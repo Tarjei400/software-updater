@@ -157,6 +157,8 @@ public class PatchLogWriter {
         sb.append(currentPatchId);
         sb.append(' ');
         sb.append(action == Action.START ? '2' : '3');
+        sb.append(' ');
+        sb.append(fileIndex);
         sb.append(')');
 
         sb.append('\t');

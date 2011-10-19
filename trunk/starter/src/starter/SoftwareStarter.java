@@ -24,42 +24,56 @@ import starter.util.CommonUtil.GetClientScriptResult;
  */
 public class SoftwareStarter {
 
-    protected String[] args;
-    protected Client client;
-    protected String jarPath;
-    protected String mainClass;
-    protected String storagePath;
-
-    public SoftwareStarter(String[] args) {
-        this.args = args;
+    protected SoftwareStarter() {
     }
 
-    public void start(String clientScriptPath) throws IOException, InvalidFormatException, LaunchFailedException {
+    public static void start(String clientScriptPath, String[] args) throws IOException, InvalidFormatException, LaunchFailedException {
         File clientScript = new File(clientScriptPath);
-        client = Client.read(Util.readFile(clientScript));
+        Client client = Client.read(Util.readFile(clientScript));
         if (client != null) {
-            start(clientScript, client);
+            start(clientScript, client, args);
         }
     }
 
-    public void start(File clientScriptFile, Client client) throws IOException, InvalidFormatException, LaunchFailedException {
-        jarPath = client.getJarPath();
-        mainClass = client.getMainClass();
-        storagePath = client.getStoragePath();
+    public static void start(File clientScriptFile, Client client, String[] args) throws IOException, InvalidFormatException, LaunchFailedException {
+        String jarPath = client.getJarPath();
+        String mainClass = client.getMainClass();
+        String storagePath = client.getStoragePath();
 
         Information clientInfo = client.getInformation();
-        Image softwareIcon = clientInfo.getSoftwareIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareStarter.class.getResource(clientInfo.getSoftwareIconPath())) : ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
-        Image updaterIcon = clientInfo.getUpdaterIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareStarter.class.getResource(clientInfo.getUpdaterIconPath())) : ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
+
+        Image softwareIcon;
+        if (clientInfo.getSoftwareIconLocation().equals("jar")) {
+            URL resourceURL = SoftwareStarter.class.getResource(clientInfo.getSoftwareIconPath());
+            if (resourceURL != null) {
+                softwareIcon = Toolkit.getDefaultToolkit().getImage(resourceURL);
+            } else {
+                throw new IOException("Resource not found: " + clientInfo.getSoftwareIconPath());
+            }
+        } else {
+            softwareIcon = ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
+        }
+        Image updaterIcon;
+        if (clientInfo.getUpdaterIconLocation().equals("jar")) {
+            URL resourceURL = SoftwareStarter.class.getResource(clientInfo.getUpdaterIconPath());
+            if (resourceURL != null) {
+                updaterIcon = Toolkit.getDefaultToolkit().getImage(resourceURL);
+            } else {
+                throw new IOException("Resource not found: " + clientInfo.getUpdaterIconPath());
+            }
+        } else {
+            updaterIcon = ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
+        }
 
         UpdateResult updateResult = Updater.update(clientScriptFile, client, new File(storagePath), clientInfo.getSoftwareName(), softwareIcon, clientInfo.getUpdaterTitle(), updaterIcon);
         if (updateResult.isUpdateSucceed() || updateResult.isLaunchSoftware()) {
-            startSoftware();
+            startSoftware(jarPath, mainClass, args);
         }
     }
 
-    protected void startSoftware() throws LaunchFailedException {
+    protected static void startSoftware(String jarPath, String mainClass, String[] args) throws LaunchFailedException {
         try {
-            ClassLoader loader = URLClassLoader.newInstance(new URL[]{new File(jarPath).toURI().toURL()}, getClass().getClassLoader());
+            ClassLoader loader = URLClassLoader.newInstance(new URL[]{new File(jarPath).toURI().toURL()}, SoftwareStarter.class.getClassLoader());
             Class<?> clazz = Class.forName(mainClass, true, loader);
             Method[] methods = clazz.getMethods();
             for (Method method : methods) {
@@ -75,11 +89,9 @@ public class SoftwareStarter {
     public static void main(String[] args) {
         Util.setLookAndFeel();
         try {
-            SoftwareStarter softwareStarter = new SoftwareStarter(args);
-
             GetClientScriptResult result = Util.getClientScript(args.length > 0 ? args[0] : null);
             if (result.getClientScript() != null) {
-                softwareStarter.start(new File(result.getClientScriptPath()), result.getClientScript());
+                SoftwareStarter.start(new File(result.getClientScriptPath()), result.getClientScript(), args);
             } else {
                 JOptionPane.showMessageDialog(null, "Config file not found, is empty or is invalid.");
             }

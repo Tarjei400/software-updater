@@ -3,6 +3,7 @@ package starter.util;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -54,14 +55,18 @@ public class CommonUtil {
 
         InputStream fin = null;
         try {
+            long fileLength = file.length();
             fin = new FileInputStream(file);
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
 
             int byteRead, cumulateByteRead = 0;
             byte[] b = new byte[8096];
-            while ((byteRead = fin.read(b)) > 0) {
+            while ((byteRead = fin.read(b)) != -1) {
                 messageDigest.update(b, 0, byteRead);
                 cumulateByteRead += byteRead;
+                if (cumulateByteRead >= fileLength) {
+                    break;
+                }
             }
 
             if (cumulateByteRead != file.length()) {
@@ -77,7 +82,6 @@ public class CommonUtil {
                     fin.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(CommonUtil.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
@@ -105,7 +109,6 @@ public class CommonUtil {
         try {
             returnResult = file.isDirectory() ? file.getAbsolutePath() : getFileDirectory(file.getAbsolutePath());
         } catch (Exception ex) {
-            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }
         return returnResult;
     }
@@ -120,8 +123,92 @@ public class CommonUtil {
         return pos != -1 ? filePath.substring(0, pos) : filePath;
     }
 
+    public static byte[] hexStringToByteArray(String hexString) {
+        int len = hexString.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hexString.charAt(i), 16) << 4) + Character.digit(hexString.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    public static boolean writeFile(File file, String content) {
+        byte[] byteContent = null;
+        try {
+            byteContent = content.getBytes("UTF-8");
+        } catch (Exception ex) {
+            return false;
+        }
+
+        return writeFile(file, byteContent);
+    }
+
+    public static boolean writeFile(File file, byte[] content) {
+        boolean returnResult = true;
+
+        FileOutputStream fout = null;
+        try {
+            fout = new FileOutputStream(file);
+            fout.write(content);
+        } catch (Exception ex) {
+            returnResult = false;
+        } finally {
+            try {
+                if (fout != null) {
+                    fout.close();
+                }
+            } catch (IOException ex) {
+            }
+        }
+
+        return returnResult;
+    }
+
+    public static boolean copyFile(File fromFile, File toFile) {
+        boolean returnResult = true;
+
+        FileInputStream fromFileStream = null;
+        FileOutputStream toFileStream = null;
+        try {
+            long fromFileLength = fromFile.length();
+
+            fromFileStream = new FileInputStream(fromFile);
+            toFileStream = new FileOutputStream(toFile);
+
+            int byteRead = 0, cumulateByteRead = 0;
+            byte[] buf = new byte[32768];
+            while ((byteRead = fromFileStream.read(buf)) != -1) {
+                toFileStream.write(buf, 0, byteRead);
+                cumulateByteRead += byteRead;
+                if (cumulateByteRead >= fromFileLength) {
+                    break;
+                }
+            }
+
+            if (cumulateByteRead != fromFile.length()) {
+                throw new Exception("The total number of bytes read does not match the file size: " + fromFile.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            returnResult = false;
+            Logger.getLogger(CommonUtil.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                if (fromFileStream != null) {
+                    fromFileStream.close();
+                }
+                if (toFileStream != null) {
+                    toFileStream.close();
+                }
+            } catch (IOException ex) {
+            }
+        }
+
+        return returnResult;
+    }
+
     public static byte[] readFile(File file) {
-        byte[] content = new byte[(int) file.length()];
+        long fileLength = file.length();
+        byte[] content = new byte[(int) fileLength];
 
         FileInputStream fin = null;
         try {
@@ -130,6 +217,9 @@ public class CommonUtil {
             int byteRead = 0, cumulateByteRead = 0;
             while ((byteRead = fin.read(content, cumulateByteRead, content.length - cumulateByteRead)) != -1) {
                 cumulateByteRead += byteRead;
+                if (cumulateByteRead >= fileLength) {
+                    break;
+                }
             }
 
             if (cumulateByteRead != content.length) {
@@ -144,7 +234,6 @@ public class CommonUtil {
                     fin.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(CommonUtil.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
@@ -179,7 +268,6 @@ public class CommonUtil {
                     in.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(CommonUtil.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
@@ -303,6 +391,30 @@ public class CommonUtil {
 
         public String getClientScriptPath() {
             return clientScriptPath;
+        }
+    }
+
+    public static void saveClientScript(File clientScriptFile, Client clientScript) throws IOException {
+        File clientScriptTemp = new File(Util.getFileDirectory(clientScriptFile) + File.separator + clientScriptFile.getName() + ".new");
+        if (!Util.writeFile(clientScriptTemp, clientScript.output()) || !clientScriptFile.delete() || !clientScriptTemp.renameTo(clientScriptFile)) {
+            throw new IOException("Failed to save to script.");
+        }
+    }
+
+    public static class ObjectReference<T> {
+
+        protected T obj;
+
+        public ObjectReference(T obj) {
+            this.obj = obj;
+        }
+
+        public T getObj() {
+            return obj;
+        }
+
+        public void setObj(T obj) {
+            this.obj = obj;
         }
     }
 }
