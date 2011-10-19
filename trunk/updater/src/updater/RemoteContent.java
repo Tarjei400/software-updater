@@ -170,8 +170,8 @@ public class RemoteContent {
         }
     }
 
-    public static boolean getPatch(GetPatchListener listener, String url, File saveToFile, String fileSHA256, int expectedLength) {
-        boolean returnResult = false;
+    public static GetPatchResult getPatch(GetPatchListener listener, String url, File saveToFile, String fileSHA256, int expectedLength) {
+        GetPatchResult returnResult = new GetPatchResult(false, false);
 
         InputStream in = null;
         HttpURLConnection httpConn = null;
@@ -196,7 +196,7 @@ public class RemoteContent {
                     }
                     fileLength = 0;
                 } else if (fileLength == expectedLength) {
-                    return true;
+                    return new GetPatchResult(true, false);
                 }
             }
 
@@ -277,14 +277,17 @@ public class RemoteContent {
                 digest(digest, saveToFile);
             }
             in = httpConn.getInputStream();
-            in = (contentEncoding != null && contentEncoding.equals("gzip")) ? new GZIPInputStream(in, 8192) : new BufferedInputStream(in);
-            fout = new BufferedOutputStream(new FileOutputStream(saveToFile, httpStatusCode == 206));
+            in = (contentEncoding != null && contentEncoding.equals("gzip")) ? new GZIPInputStream(in, 32768) : new BufferedInputStream(in, 32768);
+            fout = new BufferedOutputStream(new FileOutputStream(saveToFile, httpStatusCode == 206), 32768);
 
             int byteRead, cumulateByteRead = 0;
             byte[] b = new byte[32];
             while ((byteRead = in.read(b)) != -1) {
                 if (Thread.interrupted()) {
-                    throw new InterruptedException();
+                    boolean result = listener.downloadInterrupted();
+                    if (result) {
+                        throw new InterruptedException();
+                    }
                 }
 
                 digest.update(b, 0, byteRead);
@@ -304,9 +307,11 @@ public class RemoteContent {
                 throw new Exception("Checksum not matched. got: " + Util.byteArrayToHexString(digest.digest()) + ", expected: " + fileSHA256);
             }
 
-            returnResult = true;
+            returnResult = new GetPatchResult(true, false);
+        } catch (InterruptedException ex) {
+            return new GetPatchResult(false, true);
         } catch (Exception ex) {
-            returnResult = false;
+            returnResult = new GetPatchResult(false, false);
             Logger.getLogger(RemoteContent.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             try {
@@ -329,9 +334,30 @@ public class RemoteContent {
 
     public static interface GetPatchListener {
 
+        boolean downloadInterrupted();
+
         void byteStart(long pos);
 
         void byteDownloaded(int numberOfBytes);
+    }
+
+    public static class GetPatchResult {
+
+        protected boolean result;
+        protected boolean isInterrupted;
+
+        public GetPatchResult(boolean result, boolean isInterrupted) {
+            this.result = result;
+            this.isInterrupted = isInterrupted;
+        }
+
+        public boolean getResult() {
+            return result;
+        }
+
+        public boolean isInterrupted() {
+            return isInterrupted;
+        }
     }
 
     public static class GetCatalogResult {

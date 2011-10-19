@@ -40,7 +40,7 @@ public class UpdaterWindow {
         messageField.setBorder(null);
         messageField.setEditable(false);
         messageField.setOpaque(false);
-        messageField.setFont(messageField.getFont().deriveFont(12F));
+//        messageField.setFont(messageField.getFont().deriveFont(12F));
 
         // progress, 0% to 100%
         progressLabel = new JLabel();
@@ -61,7 +61,7 @@ public class UpdaterWindow {
             public void actionPerformed(ActionEvent e) {
                 synchronized (listeners) {
                     for (ActionListener listener : listeners) {
-                        listener.actionPerformed(new ActionEvent(null, 1, "cancel"));
+                        listener.actionPerformed(new ActionEvent(UpdaterWindow.this, 1, "cancel"));
                     }
                 }
             }
@@ -106,7 +106,7 @@ public class UpdaterWindow {
             public void windowClosing(WindowEvent e) {
                 synchronized (listeners) {
                     for (ActionListener listener : listeners) {
-                        listener.actionPerformed(new ActionEvent(null, 1, "cancel"));
+                        listener.actionPerformed(new ActionEvent(UpdaterWindow.this, 1, "cancel"));
                     }
                 }
             }
@@ -116,7 +116,7 @@ public class UpdaterWindow {
         frame.setContentPane(panel);
         frame.pack();
         frame.setLocationByPlatform(true);
-        frame.setSize(new Dimension(400, frame.getPreferredSize().height));
+        frame.setSize(new Dimension(450, frame.getPreferredSize().height));
     }
 
     public void addListener(ActionListener listener) {

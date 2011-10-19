@@ -2,6 +2,9 @@ package updater;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.KeyFactory;
@@ -16,20 +19,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import testutil.TestUtil;
-import testutil.TestUtil.ObjectReference;
 import updater.RemoteContent.GetCatalogResult;
 import updater.RemoteContent.GetPatchListener;
+import updater.RemoteContent.GetPatchResult;
 import updater.RemoteContent.RSAPublicKey;
+import updater.util.CommonUtil.ObjectReference;
 import updater.util.Util;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
  */
 public class RemoteContentTest {
-
-    private static String urlRoot = "http://localhost/";
-    private static String pathToTestPackage = "test/";
 
     public RemoteContentTest() {
     }
@@ -63,7 +63,8 @@ public class RemoteContentTest {
         String privateExponentString = "45fa8429d4494b161bbb21a7bfd29a7d1ccfa4b74c852a0d2175b7572e86f85a9b28f79a6d55ca625a7a53ba1b456bc3feec65264d1d7cdcc069299f9a95461ccf1dd38d7767abef8c25da835bd3da07f5da67ed517ab5d779987a33bf397849e58627b011bac0ec227392278413515ecbd9ea8c7cc1843780a1c296998698769825cd7ac298f5a468af873e2e30eb94cf867086742d0b8d1fd9ab7efc7ce3f07a855fe280e8714c963c8436a20fbaf81f874a6714da4699a75cb5c7e2fa0546038f8a8134661a25ce30ff37d73bd94dee33e7bdc6425729e2fd71bdb938a2f5cd7caf56eca8f7ccb8ea320b20610ffeae7f5c8380da62dca4d7964ded34b731";
 
         String xmlFileName = "RemoteContentTest_getCatalog.xml";
-        File originalFile = new File(pathToTestPackage + RemoteContentTest.class.getPackage().getName() + "/RemoteContentTest/" + xmlFileName);
+        String manipulatedXmlFileName = "RemoteContentTest_getCatalog_manipulated.xml";
+        File originalFile = new File(TestSuite.pathToTestPackage + RemoteContentTest.class.getPackage().getName().replace('.', '/') + "/RemoteContentTest/" + xmlFileName);
         String originalFileString = null;
         try {
             originalFileString = new String(Util.readFile(originalFile), "UTF-8");
@@ -75,9 +76,10 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test normal request">
         System.out.println("getCatalog - test normal request");
 
-        String url = urlRoot + xmlFileName;
+        System.out.println(TestSuite.urlRoot + manipulatedXmlFileName);
+        String url = TestSuite.urlRoot + manipulatedXmlFileName;
         long lastUpdateDate = 0L;
-        RSAPublicKey key = new RSAPublicKey(new BigInteger(TestUtil.hexStringToByteArray(modulesString)), new BigInteger(TestUtil.hexStringToByteArray(publicExponentString)));
+        RSAPublicKey key = new RSAPublicKey(new BigInteger(modulesString, 16), new BigInteger(publicExponentString, 16));
         GetCatalogResult result = RemoteContent.getCatalog(url, lastUpdateDate, key);
 
         assertTrue(result != null);
@@ -89,9 +91,9 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test If-Modified-Since header">
         System.out.println("getCatalog - test If-Modified-Since header");
 
-        url = urlRoot + xmlFileName;
+        url = TestSuite.urlRoot + manipulatedXmlFileName;
         lastUpdateDate = System.currentTimeMillis() - 2000;
-        key = new RSAPublicKey(new BigInteger(TestUtil.hexStringToByteArray(modulesString)), new BigInteger(TestUtil.hexStringToByteArray(publicExponentString)));
+        key = new RSAPublicKey(new BigInteger(modulesString, 16), new BigInteger(publicExponentString, 16));
         result = RemoteContent.getCatalog(url, lastUpdateDate, key);
 
         assertTrue(result != null);
@@ -116,7 +118,7 @@ public class RemoteContentTest {
         String partBrokenFileName = "RemoteContentTest_getPatch_part_broken.png";
         String largerFileName = "RemoteContentTest_getPatch_larger.png";
 
-        String FilePathPrefix = pathToTestPackage + getClass().getPackage().getName() + "/RemoteContentTest/";
+        String FilePathPrefix = TestSuite.pathToTestPackage + getClass().getPackage().getName().replace('.', '/') + "/RemoteContentTest/";
         File originalFile = new File(FilePathPrefix + originalFileName);
         File partFile = new File(FilePathPrefix + partFileName);
         File fullBrokenFile = new File(FilePathPrefix + fullBrokenFileName);
@@ -143,6 +145,11 @@ public class RemoteContentTest {
         GetPatchListener listener = new GetPatchListener() {
 
             @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
+
+            @Override
             public void byteStart(long pos) {
             }
 
@@ -151,14 +158,14 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        String url = urlRoot + originalFileName;
+        String url = TestSuite.urlRoot + originalFileName;
         File saveToFile = tempFile;
         String fileSHA1 = Util.getSHA256(originalFile);
         int expectedLength = (int) originalFile.length();
 
-        boolean result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
+        GetPatchResult result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
 
-        assertEquals(true, result);
+        assertEquals(true, result.getResult());
         assertEquals(0, (long) startingPosition.getObj());
         assertEquals(originalFile.length(), (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -168,13 +175,18 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test resume download">
         System.out.println("getPatch - test resume download");
 
-        boolean copyResult = TestUtil.copyFile(partFile, tempFile);
+        boolean copyResult = Util.copyFile(partFile, tempFile);
         assertEquals(true, copyResult);
         int initFileSize = (int) tempFile.length();
         startingPosition.setObj(0L);
         cumulativeByteDownloaded.setObj(0);
 
         listener = new GetPatchListener() {
+
+            @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
 
             @Override
             public void byteStart(long pos) {
@@ -186,14 +198,14 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        url = urlRoot + originalFileName;
+        url = TestSuite.urlRoot + originalFileName;
         saveToFile = tempFile;
         fileSHA1 = Util.getSHA256(originalFile);
         expectedLength = (int) originalFile.length();
 
         result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
 
-        assertEquals(true, result);
+        assertEquals(true, result.getResult());
         assertEquals(initFileSize, (long) startingPosition.getObj());
         assertEquals(originalFile.length() - initFileSize, (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -203,13 +215,18 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test resume download but some downloaded bytes in the file are broken">
         System.out.println("getPatch - test resume download but some downloaded bytes in the file are broken");
 
-        copyResult = TestUtil.copyFile(partBrokenFile, tempFile);
+        copyResult = Util.copyFile(partBrokenFile, tempFile);
         assertEquals(true, copyResult);
         initFileSize = (int) tempFile.length();
         startingPosition.setObj(0L);
         cumulativeByteDownloaded.setObj(0);
 
         listener = new GetPatchListener() {
+
+            @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
 
             @Override
             public void byteStart(long pos) {
@@ -221,14 +238,22 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        url = urlRoot + originalFileName;
+        url = TestSuite.urlRoot + originalFileName;
         saveToFile = tempFile;
         fileSHA1 = Util.getSHA256(originalFile);
         expectedLength = (int) originalFile.length();
 
-        result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
+        PrintStream ps = System.err;
+        System.setErr(new PrintStream(new OutputStream() {
 
-        assertEquals(false, result);
+            @Override
+            public void write(int b) throws IOException {
+            }
+        }));
+        result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
+        System.setErr(ps);
+
+        assertEquals(false, result.getResult());
         assertEquals(initFileSize, (long) startingPosition.getObj());
         assertEquals(originalFile.length() - initFileSize, (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -238,13 +263,18 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test download when file is fully downloaded">
         System.out.println("getPatch - test download when file is fully downloaded");
 
-        copyResult = TestUtil.copyFile(originalFile, tempFile);
+        copyResult = Util.copyFile(originalFile, tempFile);
         assertEquals(true, copyResult);
         initFileSize = (int) tempFile.length();
         startingPosition.setObj(0L);
         cumulativeByteDownloaded.setObj(0);
 
         listener = new GetPatchListener() {
+
+            @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
 
             @Override
             public void byteStart(long pos) {
@@ -256,14 +286,14 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        url = urlRoot + originalFileName;
+        url = TestSuite.urlRoot + originalFileName;
         saveToFile = tempFile;
         fileSHA1 = Util.getSHA256(originalFile);
         expectedLength = (int) originalFile.length();
 
         result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
 
-        assertEquals(true, result);
+        assertEquals(true, result.getResult());
         assertEquals(0, (long) startingPosition.getObj());
         assertEquals(originalFile.length() - initFileSize, (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -273,12 +303,17 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test download when file is fully downloaded but some downloaded bytes in the file are broken">
         System.out.println("getPatch - test download when file is fully downloaded but some downloaded bytes in the file are broken");
 
-        copyResult = TestUtil.copyFile(fullBrokenFile, tempFile);
+        copyResult = Util.copyFile(fullBrokenFile, tempFile);
         assertEquals(true, copyResult);
         startingPosition.setObj(0L);
         cumulativeByteDownloaded.setObj(0);
 
         listener = new GetPatchListener() {
+
+            @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
 
             @Override
             public void byteStart(long pos) {
@@ -290,14 +325,14 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        url = urlRoot + originalFileName;
+        url = TestSuite.urlRoot + originalFileName;
         saveToFile = tempFile;
         fileSHA1 = Util.getSHA256(originalFile);
         expectedLength = (int) originalFile.length();
 
         result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
 
-        assertEquals(true, result);
+        assertEquals(true, result.getResult());
         assertEquals(0, (long) startingPosition.getObj());
         assertEquals(originalFile.length(), (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -307,12 +342,17 @@ public class RemoteContentTest {
         //<editor-fold defaultstate="collapsed" desc="test download when the downloaded file is larger">
         System.out.println("getPatch - test download when the downloaded file is larger");
 
-        copyResult = TestUtil.copyFile(largerFile, tempFile);
+        copyResult = Util.copyFile(largerFile, tempFile);
         assertEquals(true, copyResult);
         startingPosition.setObj(0L);
         cumulativeByteDownloaded.setObj(0);
 
         listener = new GetPatchListener() {
+
+            @Override
+            public boolean downloadInterrupted() {
+                return true;
+            }
 
             @Override
             public void byteStart(long pos) {
@@ -324,14 +364,14 @@ public class RemoteContentTest {
                 cumulativeByteDownloaded.setObj(cumulativeByteDownloaded.getObj() + numberOfBytes);
             }
         };
-        url = urlRoot + originalFileName;
+        url = TestSuite.urlRoot + originalFileName;
         saveToFile = tempFile;
         fileSHA1 = Util.getSHA256(originalFile);
         expectedLength = (int) originalFile.length();
 
         result = RemoteContent.getPatch(listener, url, saveToFile, fileSHA1, expectedLength);
 
-        assertEquals(true, result);
+        assertEquals(true, result.getResult());
         assertEquals(0, (long) startingPosition.getObj());
         assertEquals(originalFile.length(), (int) cumulativeByteDownloaded.getObj());
         assertEquals(originalFile.length(), saveToFile.length());
@@ -358,20 +398,23 @@ public class RemoteContentTest {
             byte[] compressedData = bout.toByteArray();
 
             // encrypt
-            byte[] encrypted = Util.rsaEncrypt(privateKey, (mod.bitLength() / 8) - 11, compressedData);
+            int blockSize = mod.bitLength() / 8;
+            byte[] encrypted = Util.rsaEncrypt(privateKey, blockSize, blockSize - 11, compressedData);
 
             // write to file
-            TestUtil.writeFile(out, encrypted);
+            Util.writeFile(out, encrypted);
         } catch (Exception ex) {
             return false;
         }
         return true;
     }
-//    public static void main(String[] args) {
-//        String modulesString = "0080ac742891f8ba0d59dcc96b464e2245e53a9b29f8219aa0b683ad10007247ced6d74b7bef2a6b0555ec22735827b2b9dfe94664d492a723ad78d6d97d1c9b19ade1225edc060eaced684436ce221659c7e8320bc2bf5ddcdbe6751b0f476066437ccc50ea0e5afafb6a59581df509145d34aa4d0541f500f09868686f5681a509bf58feda73b35326f816b60205550783d628e5e61b24e37198349e416f09ef7579f6f25b5725d54df44017e256b1c7060f0c5ba5f3dd162e26fc5fbfcf4294ee261124737b1cdc3024dc2be62c8ebd89c8766bfaf3606a9e7aefa4fd41758498441fe69a967005c66df3ac0551d7b04910c6a9fa272aa6d081defbc2db174f";
-//        String publicExponentString = "010001";
-//        String privateExponentString = "45fa8429d4494b161bbb21a7bfd29a7d1ccfa4b74c852a0d2175b7572e86f85a9b28f79a6d55ca625a7a53ba1b456bc3feec65264d1d7cdcc069299f9a95461ccf1dd38d7767abef8c25da835bd3da07f5da67ed517ab5d779987a33bf397849e58627b011bac0ec227392278413515ecbd9ea8c7cc1843780a1c296998698769825cd7ac298f5a468af873e2e30eb94cf867086742d0b8d1fd9ab7efc7ce3f07a855fe280e8714c963c8436a20fbaf81f874a6714da4699a75cb5c7e2fa0546038f8a8134661a25ce30ff37d73bd94dee33e7bdc6425729e2fd71bdb938a2f5cd7caf56eca8f7ccb8ea320b20610ffeae7f5c8380da62dca4d7964ded34b731";
-//
-//        System.out.println(makeXMLForGetCatalogTest(new File(pathToTestPackage + RemoteContentTest.class.getPackage().getName() + "/RemoteContentTest/RemoteContentTest_getCatalog.xml"), new File("RemoteContentTest_getCatalog_manipulated.xml"), new BigInteger(TestUtil.hexStringToByteArray(modulesString)), new BigInteger(TestUtil.hexStringToByteArray(privateExponentString))));
-//    }
+
+    public static void main(String[] args) {
+        String modulesString = "0080ac742891f8ba0d59dcc96b464e2245e53a9b29f8219aa0b683ad10007247ced6d74b7bef2a6b0555ec22735827b2b9dfe94664d492a723ad78d6d97d1c9b19ade1225edc060eaced684436ce221659c7e8320bc2bf5ddcdbe6751b0f476066437ccc50ea0e5afafb6a59581df509145d34aa4d0541f500f09868686f5681a509bf58feda73b35326f816b60205550783d628e5e61b24e37198349e416f09ef7579f6f25b5725d54df44017e256b1c7060f0c5ba5f3dd162e26fc5fbfcf4294ee261124737b1cdc3024dc2be62c8ebd89c8766bfaf3606a9e7aefa4fd41758498441fe69a967005c66df3ac0551d7b04910c6a9fa272aa6d081defbc2db174f";
+        String publicExponentString = "010001";
+        String privateExponentString = "45fa8429d4494b161bbb21a7bfd29a7d1ccfa4b74c852a0d2175b7572e86f85a9b28f79a6d55ca625a7a53ba1b456bc3feec65264d1d7cdcc069299f9a95461ccf1dd38d7767abef8c25da835bd3da07f5da67ed517ab5d779987a33bf397849e58627b011bac0ec227392278413515ecbd9ea8c7cc1843780a1c296998698769825cd7ac298f5a468af873e2e30eb94cf867086742d0b8d1fd9ab7efc7ce3f07a855fe280e8714c963c8436a20fbaf81f874a6714da4699a75cb5c7e2fa0546038f8a8134661a25ce30ff37d73bd94dee33e7bdc6425729e2fd71bdb938a2f5cd7caf56eca8f7ccb8ea320b20610ffeae7f5c8380da62dca4d7964ded34b731";
+
+//        System.out.println(makeXMLForGetCatalogTest(new File("catalog.xml"), new File("catalog_manipulated.xml"), new BigInteger(modulesString, 16), new BigInteger(privateExponentString, 16)));
+//        System.out.println(makeXMLForGetCatalogTest(new File(TestSuite.pathToTestPackage + RemoteContentTest.class.getPackage().getName() + "/RemoteContentTest/RemoteContentTest_getCatalog.xml"), new File("RemoteContentTest_getCatalog_manipulated.xml"), new BigInteger(modulesString, 16), new BigInteger(privateExponentString, 16)));
+    }
 }

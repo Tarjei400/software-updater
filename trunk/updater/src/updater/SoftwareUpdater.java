@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -18,6 +19,7 @@ import javax.swing.JOptionPane;
 import updater.script.Client;
 import updater.RemoteContent.GetCatalogResult;
 import updater.RemoteContent.GetPatchListener;
+import updater.RemoteContent.GetPatchResult;
 import updater.RemoteContent.RSAPublicKey;
 import updater.gui.UpdaterWindow;
 import updater.script.Catalog;
@@ -25,6 +27,7 @@ import updater.script.Catalog.Update;
 import updater.script.Client.Information;
 import updater.script.InvalidFormatException;
 import updater.util.CommonUtil.GetClientScriptResult;
+import updater.util.CommonUtil.ObjectReference;
 import updater.util.DownloadProgessUtil;
 import updater.util.Util;
 
@@ -37,16 +40,39 @@ public class SoftwareUpdater {
     }
 
     public static void checkForUpdates(String clientScriptPath) throws InvalidFormatException, IOException {
-        Client clientScript = Client.read(Util.readFile(new File(clientScriptPath)));
-        if (clientScript != null) {
-            checkForUpdates(clientScript);
+        byte[] clientScriptData = Util.readFile(new File(clientScriptPath));
+        if (clientScriptData != null) {
+            throw new IOException("Failed to read the data in the client script file path specified.");
         }
+
+        checkForUpdates(Client.read(clientScriptData));
     }
 
     public static void checkForUpdates(Client clientScript) throws InvalidFormatException, IOException {
         Information clientInfo = clientScript.getInformation();
-        Image softwareIcon = clientInfo.getSoftwareIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getSoftwareIconPath())) : ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
-        Image updaterIcon = clientInfo.getUpdaterIconLocation().equals("jar") ? Toolkit.getDefaultToolkit().getImage(SoftwareUpdater.class.getResource(clientInfo.getUpdaterIconPath())) : ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
+
+        Image softwareIcon;
+        if (clientInfo.getSoftwareIconLocation().equals("jar")) {
+            URL resourceURL = SoftwareUpdater.class.getResource(clientInfo.getSoftwareIconPath());
+            if (resourceURL != null) {
+                softwareIcon = Toolkit.getDefaultToolkit().getImage(resourceURL);
+            } else {
+                throw new IOException("Resource not found: " + clientInfo.getSoftwareIconPath());
+            }
+        } else {
+            softwareIcon = ImageIO.read(new File(clientInfo.getSoftwareIconPath()));
+        }
+        Image updaterIcon;
+        if (clientInfo.getUpdaterIconLocation().equals("jar")) {
+            URL resourceURL = SoftwareUpdater.class.getResource(clientInfo.getUpdaterIconPath());
+            if (resourceURL != null) {
+                updaterIcon = Toolkit.getDefaultToolkit().getImage(resourceURL);
+            } else {
+                throw new IOException("Resource not found: " + clientInfo.getUpdaterIconPath());
+            }
+        } else {
+            updaterIcon = ImageIO.read(new File(clientInfo.getUpdaterIconPath()));
+        }
 
         final Thread currentThread = Thread.currentThread();
         final UpdaterWindow updaterGUI = new UpdaterWindow(clientInfo.getSoftwareName(), softwareIcon, clientInfo.getUpdaterTitle(), updaterIcon);
@@ -54,13 +80,14 @@ public class SoftwareUpdater {
 
             @Override
             public void actionPerformed(ActionEvent e) {
+                // user press cancel
                 updaterGUI.setEnableCancel(false);
                 currentThread.interrupt();
             }
         });
         updaterGUI.setProgress(0);
         updaterGUI.setMessage("Getting patches catalog ...");
-        JFrame updaterFrame = updaterGUI.getGUI();
+        final JFrame updaterFrame = updaterGUI.getGUI();
         updaterFrame.setVisible(true);
 
         if (!clientScript.getUpdates().isEmpty()) {
@@ -91,38 +118,73 @@ public class SoftwareUpdater {
             return;
         }
 
-        final IntegerReference downloadedSize = new IntegerReference(0);
+        final ObjectReference<Integer> downloadedSize = new ObjectReference<Integer>(0);
+        final ObjectReference<Long> lastRefreshTime = new ObjectReference<Long>(0L);
+        final ObjectReference<Integer> downloadedSizeSinceLastRefresh = new ObjectReference<Integer>(0);
         final long totalDownloadSize = calculateTotalLength(updatePatches);
         final DownloadProgessUtil downloadProgress = new DownloadProgessUtil();
         downloadProgress.setTotalSize(totalDownloadSize);
         GetPatchListener listener = new GetPatchListener() {
 
             @Override
+            public boolean downloadInterrupted() {
+                Object[] options = {"Yes", "No"};
+                int result = JOptionPane.showOptionDialog(updaterFrame, "Are you sure to cancel download?", "Cancel Download", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+                return result == 0;
+            }
+
+            @Override
             public void byteStart(long pos) {
+                downloadedSize.setObj(downloadedSize.getObj() + (int) pos);
+                downloadProgress.setDownloadedSize(downloadProgress.getDownloadedSize() + pos);
+                updaterGUI.setProgress((int) ((float) downloadedSize.getObj() * 100F / (float) totalDownloadSize));
             }
 
             @Override
             public void byteDownloaded(int numberOfBytes) {
-                int newValue = downloadedSize.getValue() + numberOfBytes;
-                downloadedSize.setValue(newValue);
-                downloadProgress.setDownloadedSize(newValue);
-                updaterGUI.setProgress((int) ((float) downloadedSize.getValue() / (float) totalDownloadSize));
-                // Downloading: 1.6 MiB / 240 MiB, 2.6 MiB/s, 1m32s remaining
-                updaterGUI.setMessage("Downloading: "
-                        + Util.humanReadableByteCount(downloadedSize.getValue(), false) + " / " + Util.humanReadableByteCount(totalDownloadSize, false) + ", "
-                        + Util.humanReadableByteCount(downloadProgress.getSpeed(), false) + " / s" + ", "
-                        + Util.humanReadableTimeCount(downloadProgress.getTimeRemaining(), 3) + " remaining");
+                downloadedSizeSinceLastRefresh.setObj(downloadedSizeSinceLastRefresh.getObj() + numberOfBytes);
+
+//                // for test purpose - slow down the download speed (from localhost) to observe or do operation
+//                try {
+//                    Thread.sleep(1);
+//                } catch (InterruptedException ex) {
+//                    Logger.getLogger(SoftwareUpdater.class.getName()).log(Level.SEVERE, null, ex);
+//                }
+
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastRefreshTime.getObj() > 10) {
+                    lastRefreshTime.setObj(currentTime);
+
+                    downloadedSize.setObj(downloadedSize.getObj() + downloadedSizeSinceLastRefresh.getObj());
+                    downloadProgress.feed(downloadedSizeSinceLastRefresh.getObj());
+                    downloadedSizeSinceLastRefresh.setObj(0);
+                    updaterGUI.setProgress((int) ((float) downloadedSize.getObj() * 100F / (float) totalDownloadSize));
+                    // Downloading: 1.6 MiB / 240 MiB, 2.6 MiB/s, 1m 32s remaining
+                    updaterGUI.setMessage("Downloading: "
+                            + Util.humanReadableByteCount(downloadedSize.getObj(), false) + " / " + Util.humanReadableByteCount(totalDownloadSize, false) + ", "
+                            + Util.humanReadableByteCount(downloadProgress.getSpeed(), false) + "/s" + ", "
+                            + Util.humanReadableTimeCount(downloadProgress.getTimeRemaining(), 3) + " remaining");
+                }
             }
         };
 
         // update storage path
         for (Update update : updatePatches) {
-            File saveToFile = new File(clientScript.getStoragePath() + update.getId() + ".patch");
-            // add: if download failed and saveToFile is not empty, delete it and download again
-            boolean updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), saveToFile, update.getPatchChecksum(), update.getPatchLength());
-            if (!updateResult) {
+            File saveToFile = new File(clientScript.getStoragePath() + File.separator + update.getId() + ".patch");
+            long saveToFileLength = saveToFile.length();
+            GetPatchResult updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), saveToFile, update.getPatchChecksum(), update.getPatchLength());
+            if (!updateResult.isInterrupted() && !updateResult.getResult() && saveToFileLength != 0) {
+                // if download failed and saveToFile is not empty, delete it and download again
+                if (saveToFile.exists() && saveToFile.length() > saveToFileLength) {
+                    downloadedSize.setObj(downloadedSize.getObj() - (int) (saveToFile.length() - saveToFileLength));
+                }
                 saveToFile.delete();
-                JOptionPane.showMessageDialog(updaterFrame, "Error occurred when getting the update patch.");
+                updateResult = RemoteContent.getPatch(listener, update.getPatchUrl(), saveToFile, update.getPatchChecksum(), update.getPatchLength());
+            }
+            if (updateResult.isInterrupted() || !updateResult.getResult()) {
+                if (!updateResult.isInterrupted()) {
+                    JOptionPane.showMessageDialog(updaterFrame, "Error occurred when getting the update patch.");
+                }
                 disposeWindow(updaterFrame);
                 return;
             }
@@ -130,6 +192,7 @@ public class SoftwareUpdater {
 
         updaterGUI.setProgress(100);
         updaterGUI.setMessage("Finished");
+        JOptionPane.showMessageDialog(updaterFrame, "Download patches finished.");
         JOptionPane.showMessageDialog(updaterFrame, "You have to restart the application to make the update take effect.");
         disposeWindow(updaterFrame);
     }
@@ -153,8 +216,9 @@ public class SoftwareUpdater {
             if (update.getVersionFrom().equals(fromVersion)) {
                 List<Update> tempResult = new ArrayList<Update>();
 
-                List<Update> _allUpdates = getPatches(allUpdates, update.getVersionTo());
                 tempResult.add(update);
+
+                List<Update> _allUpdates = getPatches(allUpdates, update.getVersionTo());
                 if (!_allUpdates.isEmpty()) {
                     tempResult.addAll(_allUpdates);
                 }
@@ -187,8 +251,12 @@ public class SoftwareUpdater {
     }
 
     public static Catalog getUpdatedCatalog(String clientScriptPath) throws IOException, InvalidFormatException {
-        Client client = Client.read(Util.readFile(new File(clientScriptPath)));
-        return getUpdatedCatalog(client);
+        byte[] clientScriptData = Util.readFile(new File(clientScriptPath));
+        if (clientScriptData != null) {
+            throw new IOException("Failed to read the data in the client script file path specified.");
+        }
+
+        return getUpdatedCatalog(Client.read(clientScriptData));
     }
 
     protected static Catalog getUpdatedCatalog(Client client) throws IOException {
@@ -211,23 +279,6 @@ public class SoftwareUpdater {
             throw new IOException("Error occurred when getting the catalog.");
         }
         return getCatalogResult.getCatalog();
-    }
-
-    public static class IntegerReference {
-
-        protected int value;
-
-        public IntegerReference(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
-
-        public void setValue(int value) {
-            this.value = value;
-        }
     }
 
     public static void main(String[] args) throws IOException {

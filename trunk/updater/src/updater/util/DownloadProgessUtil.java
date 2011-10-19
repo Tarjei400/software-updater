@@ -26,9 +26,8 @@ public class DownloadProgessUtil {
         return downloadedSize;
     }
 
-    public synchronized void setDownloadedSize(long downloadedSize) {
+    public void setDownloadedSize(long downloadedSize) {
         this.downloadedSize = downloadedSize;
-        feed(downloadedSize - this.downloadedSize);
     }
 
     public long getTotalSize() {

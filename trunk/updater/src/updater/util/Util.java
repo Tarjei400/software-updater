@@ -40,8 +40,8 @@ public class Util extends CommonUtil {
 
             count++;
         }
-        if (count < maxDisplay && buf >= 2592000) {
-            sb.append(sb.length() != 0 ? ", " : "");
+        if (count < maxDisplay && (buf >= 2592000 || count != 0)) {
+            sb.append(count != 0 ? ", " : "");
 
             int month = buf / 2592000;
             buf %= 2592000;
@@ -52,8 +52,8 @@ public class Util extends CommonUtil {
 
             count++;
         }
-        if (count < maxDisplay && (buf >= 86400 || sb.length() != 0)) {
-            sb.append(sb.length() != 0 ? ", " : "");
+        if (count < maxDisplay && (buf >= 86400 || count != 0)) {
+            sb.append(count != 0 ? ", " : "");
 
             int day = buf / 86400;
             buf %= 86400;
@@ -64,8 +64,8 @@ public class Util extends CommonUtil {
 
             count++;
         }
-        if (count < maxDisplay && (buf >= 3600 || sb.length() != 0)) {
-            sb.append(sb.length() != 0 ? ", " : "");
+        if (count < maxDisplay && (buf >= 3600 || count != 0)) {
+            sb.append(count != 0 ? ", " : "");
 
             int hour = buf / 3600;
             buf %= 3600;
@@ -75,8 +75,8 @@ public class Util extends CommonUtil {
 
             count++;
         }
-        if (count < maxDisplay && (buf >= 60 || sb.length() != 0)) {
-            sb.append(sb.length() != 0 ? ' ' : "");
+        if (count < maxDisplay && (buf >= 60 || count != 0)) {
+            sb.append(count != 0 ? ' ' : "");
 
             int minute = buf / 60;
             buf %= 60;
@@ -87,7 +87,7 @@ public class Util extends CommonUtil {
             count++;
         }
         if (count < maxDisplay) {
-            sb.append(sb.length() != 0 ? ' ' : "");
+            sb.append(count != 0 ? ' ' : "");
 
             sb.append(buf);
             sb.append('s');
@@ -97,20 +97,20 @@ public class Util extends CommonUtil {
     }
 
     // move to builder
-    public static byte[] rsaEncrypt(PrivateKey key, int blockSize, byte[] b) {
+    public static byte[] rsaEncrypt(PrivateKey key, int blockSize, int contentBlockSize, byte[] b) {
         byte[] returnResult = null;
 
         try {
-            ByteArrayOutputStream rsaBuffer = new ByteArrayOutputStream(b.length + (blockSize - (b.length % blockSize)));
+            ByteArrayOutputStream bout = new ByteArrayOutputStream(((b.length / contentBlockSize) * blockSize) + (b.length % contentBlockSize == 0 ? 0 : blockSize));
 
-            Cipher decryptCipher = Cipher.getInstance("RSA");
-            decryptCipher.init(Cipher.ENCRYPT_MODE, key);
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, key);
 
-            for (int i = 0, iEnd = b.length; i < iEnd; i += blockSize) {
-                rsaBuffer.write(decryptCipher.doFinal(b, i, i + blockSize > iEnd ? iEnd - i : blockSize));
+            for (int i = 0, iEnd = b.length; i < iEnd; i += contentBlockSize) {
+                bout.write(cipher.doFinal(b, i, i + contentBlockSize > iEnd ? iEnd - i : contentBlockSize));
             }
 
-            returnResult = rsaBuffer.toByteArray();
+            returnResult = bout.toByteArray();
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -126,16 +126,16 @@ public class Util extends CommonUtil {
                 throw new Exception("RSA block size not match.");
             }
 
-            ByteArrayOutputStream rsaBuffer = new ByteArrayOutputStream(b.length);
+            ByteArrayOutputStream bout = new ByteArrayOutputStream(b.length);
 
-            Cipher decryptCipher = Cipher.getInstance("RSA");
-            decryptCipher.init(Cipher.DECRYPT_MODE, key);
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, key);
 
             for (int i = 0, iEnd = b.length; i < iEnd; i += blockSize) {
-                rsaBuffer.write(decryptCipher.doFinal(b, i, blockSize));
+                bout.write(cipher.doFinal(b, i, blockSize));
             }
 
-            returnResult = rsaBuffer.toByteArray();
+            returnResult = bout.toByteArray();
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }

@@ -6,9 +6,9 @@
             <to>1.0.1</to>
         </version>
         <patch>
-            <url>http://localhost/1.0.0_1.0.1</url>
-            <checksum>checksum</checksum>
-            <length>100</length>
+            <url>http://localhost/SoftwareUpdaterTest/1.patch</url>
+            <checksum>cb6eae9222be257ea73c0a9ad1548ac56fcc9c2bf07b5616efe689c075f5b7ae</checksum>
+            <length>48221152</length>
             <encryption>
                 <type>AES</type>
                 <key>key</key>
@@ -22,9 +22,9 @@
             <to>1.0.2</to>
         </version>
         <patch>
-            <url>http://localhost/1.0.1_1.0.2</url>
-            <checksum>checksum</checksum>
-            <length>101</length>
+            <url>http://localhost/SoftwareUpdaterTest/2.patch</url>
+            <checksum>ded8e7d0f7361ee5521ca6bd945471829205b32868ee8013685ac131e9d9f80b</checksum>
+            <length>27220688</length>
         </patch>
     </update>
 </updates>
