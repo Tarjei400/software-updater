@@ -2,6 +2,7 @@ package updater;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -56,7 +57,7 @@ public class RemoteContent {
 
             // set request header
             httpConn.setRequestProperty("Connection", "close");
-            httpConn.setRequestProperty("Accept-Encoding", "gzip");
+//            httpConn.setRequestProperty("Accept-Encoding", "gzip");
             httpConn.setRequestProperty("User-Agent", "Software Updater");
             httpConn.setUseCaches(false);
             if (lastUpdateDate != -1) {
@@ -95,7 +96,7 @@ public class RemoteContent {
             in = (contentEncoding != null && contentEncoding.equals("gzip")) ? new GZIPInputStream(in, 8192) : new BufferedInputStream(in);
             ByteArrayOutputStream buffer = contentLength == -1 ? new ByteArrayOutputStream() : new ByteArrayOutputStream(contentLength);
             int byteRead;
-            byte[] b = new byte[contentLength == -1 ? 32 : Math.min(contentLength, 32)];
+            byte[] b = new byte[32];
             while ((byteRead = in.read(b)) != -1) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException();
@@ -103,6 +104,7 @@ public class RemoteContent {
                 buffer.write(b, 0, byteRead);
             }
 
+            // downloaded
             byte[] content = buffer.toByteArray();
 
             // decrypt
@@ -112,7 +114,7 @@ public class RemoteContent {
                 Cipher decryptCipher = Cipher.getInstance("RSA");
                 decryptCipher.init(Cipher.DECRYPT_MODE, key.getKey());
 
-                int maxContentLength = key.getMaxContentLength();
+                int maxContentLength = key.getBlockSize();
                 if (content.length % maxContentLength != 0) {
                     throw new Exception("RSA block size not match.");
                 }
@@ -124,7 +126,16 @@ public class RemoteContent {
                 content = rsaBuffer.toByteArray();
             }
 
-            returnResult = new GetCatalogResult(Catalog.read(buffer.toByteArray()), false);
+            // decompress
+            ByteArrayOutputStream decompressedOut = new ByteArrayOutputStream();
+            ByteArrayInputStream compressedIn = new ByteArrayInputStream(content);
+            GZIPInputStream decompressedGIn = new GZIPInputStream(compressedIn);
+            while ((byteRead = decompressedGIn.read(b)) != -1) {
+                decompressedOut.write(b, 0, byteRead);
+            }
+            content = decompressedOut.toByteArray();
+
+            returnResult = new GetCatalogResult(Catalog.read(content), false);
         } catch (Exception ex) {
             Logger.getLogger(RemoteContent.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
@@ -253,9 +264,15 @@ public class RemoteContent {
                 throw new Exception("Expected length and respond content length not match.");
             }
 
+            // notify listener the starting byte position
+            if (httpStatusCode == 200) {
+                listener.byteStart(0);
+            } else if (httpStatusCode == 206) {
+                listener.byteStart(fileLength);
+            }
 
             // download
-            MessageDigest digest = MessageDigest.getInstance("SHA1");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             if (fileLength != 0) {
                 digest(digest, saveToFile);
             }
@@ -284,7 +301,7 @@ public class RemoteContent {
                 throw new Exception("Error occurred when reading (cumulated bytes read != expected length).");
             }
             if (!Util.byteArrayToHexString(digest.digest()).equals(fileSHA256)) {
-                throw new Exception("Checksum not matched.");
+                throw new Exception("Checksum not matched. got: " + Util.byteArrayToHexString(digest.digest()) + ", expected: " + fileSHA256);
             }
 
             returnResult = true;
@@ -311,6 +328,8 @@ public class RemoteContent {
     }
 
     public static interface GetPatchListener {
+
+        void byteStart(long pos);
 
         void byteDownloaded(int numberOfBytes);
     }
@@ -355,36 +374,8 @@ public class RemoteContent {
             return null;
         }
 
-        public int getMaxContentLength() {
-            return (mod.bitLength() / 8) - 11;
+        public int getBlockSize() {
+            return (mod.bitLength() / 8);
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-//        FileInputStream fin = new FileInputStream(new File("N_VirtualBox-4.1.4-74291-Win.exe"));
-//        int byteRead;
-//        byte[] b = new byte[1024];
-//        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-//        while ((byteRead = fin.read(b)) != -1) {
-//            digest.update(b, 0, byteRead);
-//        }
-//        System.out.println(Util.byteArrayToHexString(digest.digest()));
-        Thread thread = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                System.out.println(getPatch(new GetPatchListener() {
-
-                    @Override
-                    public void byteDownloaded(int numberOfBytes) {
-                    }
-                }, "http://download.virtualbox.org/virtualbox/4.1.4/VirtualBox-4.1.4-74291-Win.exe", new File("VirtualBox-4.1.4-74291-Win.exe"), "d90568b90fe4d6b091d2673e996880d47afa9e952fedd0befdec160ee216e468", 91681072));
-            }
-        });
-        thread.start();
-        Thread.sleep(10000);
-        thread.interrupt();
-        Thread.sleep(5000);
-        System.out.println("end");
     }
 }

@@ -15,10 +15,10 @@ public class DownloadProgessUtil {
     protected long speed;
 
     public DownloadProgessUtil() {
-        totalSize = 0;
         downloadedSize = 0;
+        totalSize = 0;
         averageTimeSpan = 5;
-        records = new LinkedList();
+        records = new LinkedList<Record>();
         speed = 0;
     }
 
@@ -27,6 +27,7 @@ public class DownloadProgessUtil {
     }
 
     public synchronized void setDownloadedSize(long downloadedSize) {
+        this.downloadedSize = downloadedSize;
         feed(downloadedSize - this.downloadedSize);
     }
 
@@ -42,11 +43,13 @@ public class DownloadProgessUtil {
         return averageTimeSpan;
     }
 
-    public void setAverageTimeSpan(int averageTimeSpan) {
+    public synchronized void setAverageTimeSpan(int averageTimeSpan) {
         this.averageTimeSpan = averageTimeSpan;
+        updateSpeed();
     }
 
     public synchronized void feed(long byteDownloaded) {
+        this.downloadedSize += byteDownloaded;
         records.add(new Record(byteDownloaded));
         updateSpeed();
     }
@@ -56,17 +59,16 @@ public class DownloadProgessUtil {
     }
 
     public int getTimeRemaining() {
-        return (int) ((double) (totalSize - downloadedSize) / (double) speed);
+        return speed == 0 ? 0 : (int) ((double) (totalSize - downloadedSize) / (double) speed);
     }
 
     protected void updateSpeed() {
         // should be synchronized
         long currentTime = System.currentTimeMillis();
         long minimumTime = currentTime;
-        long _averageTimeSpan = averageTimeSpan * 1000;
         for (int i = 0, iEnd = records.size(); i < iEnd; i++) {
-            Record record = records.get(0);
-            if (currentTime - record.time > _averageTimeSpan) {
+            Record record = records.get(i);
+            if (currentTime - record.time > averageTimeSpan * 1000) {
                 records.remove(i);
                 i--;
                 iEnd--;
@@ -79,7 +81,7 @@ public class DownloadProgessUtil {
         for (Record record : records) {
             bytesDownloadedWithinPeriod += record.byteDownloaded;
         }
-        speed = bytesDownloadedWithinPeriod / (currentTime - minimumTime);
+        speed = currentTime == minimumTime ? 0 : (long) ((double) bytesDownloadedWithinPeriod / ((double) (currentTime - minimumTime) / 1000F));
     }
 
     protected static class Record {

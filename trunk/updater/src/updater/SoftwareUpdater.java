@@ -24,9 +24,9 @@ import updater.script.Catalog;
 import updater.script.Catalog.Update;
 import updater.script.Client.Information;
 import updater.script.InvalidFormatException;
+import updater.util.CommonUtil.GetClientScriptResult;
 import updater.util.DownloadProgessUtil;
 import updater.util.Util;
-import updater.util.Util.GetClientScriptResult;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
@@ -96,6 +96,10 @@ public class SoftwareUpdater {
         final DownloadProgessUtil downloadProgress = new DownloadProgessUtil();
         downloadProgress.setTotalSize(totalDownloadSize);
         GetPatchListener listener = new GetPatchListener() {
+
+            @Override
+            public void byteStart(long pos) {
+            }
 
             @Override
             public void byteDownloaded(int numberOfBytes) {
