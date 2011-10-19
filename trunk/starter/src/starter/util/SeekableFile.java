@@ -48,7 +48,7 @@ public class SeekableFile implements SeekableSource {
                 byteToRead = b.length;
             }
 
-            if ((byteRead = file.read(b, 0, byteToRead)) > 0) {
+            if ((byteRead = file.read(b, 0, byteToRead)) != -1) {
                 bb.put(b, 0, byteRead);
                 cumulatedByteRead += byteRead;
             } else {

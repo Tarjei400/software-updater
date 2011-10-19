@@ -17,7 +17,7 @@ import starter.script.Client;
 import starter.patch.Updater;
 import starter.patch.Updater.UpdateResult;
 import starter.script.Client.Information;
-import starter.util.Util.GetClientScriptResult;
+import starter.util.CommonUtil.GetClientScriptResult;
 
 /**
  * @author Chan Wai Shing <cws1989@gmail.com>
