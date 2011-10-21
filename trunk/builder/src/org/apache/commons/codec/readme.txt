@@ -1,1 +1,0 @@
-***Part of the code in this Apache Commons Codec has been removed so as to only remain the Base64 codec***
