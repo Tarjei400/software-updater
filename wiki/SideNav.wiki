@@ -1,10 +1,12 @@
   * [Overview Overview]
-  * [FlowDetails Flow Details]
-  * [ScriptFormat Script Format]
+  * Flow Details
+    * [GeneralFlow General Flow]
+    * [LauncherFlow Launcher Flow]
+    * [DownloaderFlow Downloader Flow]
+  * Script Format
+    * [ClientScript Client Script]
+    * [CatalogScript Catalog Script]
+    * [PatchScript Patch Script]
   * Tutorial & Example
     * [SimpleExample Simple Example]
-    * Advanced
-      * [LauncherSettings Launcher Settings]
-      * [CustomizeGUI Customize GUI]
-      * [AuthenticationAndEncryption Authentication & Encryption]
-      * [WorkWithoutGUI Work without GUI]
+    * [AdvancedTutorial Advanced Tutorial]

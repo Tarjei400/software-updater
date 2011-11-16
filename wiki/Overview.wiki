@@ -1,5 +1,3 @@
-#sidebar SideNav
-
 =Overview=
 This software is divided into four parts. They are:
  # [#Builder Builder] - create patches, update catalog etc.
