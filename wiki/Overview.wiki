@@ -1,0 +1,69 @@
+#sidebar SideNav
+
+=Overview=
+This software is divided into four parts. They are:
+ # [#Builder Builder] - create patches, update catalog etc.
+ # [#Launcher Launcher] - do patching and launch the software
+ # [#Downloader Downloader] - check and download patches from the Internet
+ # [#Self-Updater Self-Updater] - utility used to patch the launcher
+
+==Builder==
+The builder is a command-line tool, the following are the main functions:
+{{{
+ -catalog <mode file>       e|d for 'mode', e for encrypt, d for decrypt;
+                            'file' is the catalog file
+ -full <folder>             create a full patch for upgrade from all
+                            version (unless specified)
+ -patch <old new>           create a patch for upgrade from 'old' to
+                            'new'; 'old' and 'new' are the directory of
+                            the two versions
+}}}
+with the following functions also:
+{{{
+ -genkey <method length>    AES|RSA for 'method'; generate cipher key with
+                            specified key length in bits
+ -renew <file>              renew the IV in the AES key file
+ -sha256 <file>             generate SHA-256 checksum of the file
+ -validate <file>           validate a XML script file
+}}}
+with the following options available:
+{{{
+ -f,--from <version>        specify the version-from
+ -fs,--from-sub <version>   specify the version-from-subsequent
+ -t,--to <version>          specify the version-to
+ -o,--output <file>         specify output to which file
+ -k,--key <file>            specify the key file to use
+}}}
+The following are some functions for testing or for fun:
+{{{
+ -do <folder patch>         apply the patch to the specified folder
+ -extract <file folder>     extract the patch 'file' to the folder
+ -pack <folder>             pack the folder to a patch
+ -compress <file>           compress the 'file' using XZ/LZMA2
+ -decompress <file>         decompress the 'file' using XZ/LZMA2
+ -diff <old new>            generate a binary diff file of 'new' from
+                            'old'
+ -diffpatch <file patch>    patch the 'file' with the 'patch'
+ -v,--version               show the version of this software
+ -vb,--verbose              turn on verbose mode, output details when
+                            encounter error
+}}}
+
+==Launcher==
+The launcher is responsible for applying patchs and launch the software. After executing the launcher, it will check the <a>client script</a> to see if there is any patches downloaded. If there is any, it will start patching the software and prompt a GUI showing progress and message to user. After the patching finished or actually there is no any new updates, the launcher will launcher the software.
+
+If you don't like the default GUI, you can implement one yourself. See <a>updater.gui.UpdaterWindow</a>.
+
+If you don't want to use the GUI, you can invoke the functions in the <a>updater.launcher.BatchPatcher</a> or <a>updater.patch</a> to apply patches.
+
+==Downloader==
+The downloader is responsible for checking new updates and download suitable patches from the Internet. There is a default GUI provided showing the download progress, speed and estimated remaining time.
+
+If you don't like the default GUI, you can implement one yourself. See <a>updater.gui.UpdaterWindow</a>.
+
+If you don't want to use the GUI, you can invoke the functions in the <a>updater.download.PatcheDownloader</a> to download patchers.
+
+==Self-Updater==
+This is an updater used by the launcher. The launcher will update the software by add, replace and remove files. Sometimes, we may want to update the launcher jar file. However, when we are executing the launcher to do the update, the launcher jar file will be locked by the JVM. This make updating the launcher using the launcher unworkable. This self-updater is then made to solve this problem.
+
+After the update had been done by the launcher, a list of files that contains those 'replacement failed' files will be generated. If the list is not empty, the launcher will invoke the self updater, pass the list to it and exit immediately. The self updater can then do a replacement according to the file list. After the self-updater has replaced those files successfully, it will invoke the launcher to launche the software.
