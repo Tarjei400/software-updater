@@ -1,6 +1,7 @@
+=Overview=
+
 <wiki:toc max_depth="3" />
 
-=Overview=
 This software contains a set of tools that provide a convenient and safe way to do software updating on client side.
 
 This software is divided into four parts. They are:
