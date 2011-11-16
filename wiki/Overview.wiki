@@ -1,9 +1,15 @@
+<wiki:toc max_depth="3" />
+
 =Overview=
+This software contains a set of tools that provide a convenient and safe way to do software updating on client side.
+
 This software is divided into four parts. They are:
- # [#Builder Builder] - create patches, update catalog etc.
- # [#Launcher Launcher] - do patching and launch the software
- # [#Downloader Downloader] - check and download patches from the Internet
- # [#Self-Updater Self-Updater] - utility used to patch the launcher
+ # [http://code.google.com/p/software-updater/wiki/Overview#Builder Builder] - create patches, update catalog etc.
+ # [http://code.google.com/p/software-updater/wiki/Overview#Launcher Launcher] - do patching and launch the software
+ # [http://code.google.com/p/software-updater/wiki/Overview#Downloader Downloader] - check and download patches from the Internet
+ # [http://code.google.com/p/software-updater/wiki/Overview#Self-Updater Self-Updater] - utility used to patch the launcher
+
+Basically self-updater is part of the launcher so there actually contain only three parts. Launcher and downloader will be distributed accompany with your software and builder will reside in your computer. Because the downloader needs to download the patches through the Internet, so you have to prepare an Internet host space to put the patches.
 
 ==Builder==
 The builder is a command-line tool, the following are the main functions:

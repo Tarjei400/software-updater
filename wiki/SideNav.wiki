@@ -1,4 +1,7 @@
   * [Overview Overview]
+  * Tutorial & Example
+    * [SimpleExample Simple Example]
+    * [AdvancedTutorial Advanced Tutorial]
   * Flow Details
     * [GeneralFlow General Flow]
     * [LauncherFlow Launcher Flow]
@@ -7,6 +10,3 @@
     * [ClientScript Client Script]
     * [CatalogScript Catalog Script]
     * [PatchScript Patch Script]
-  * Tutorial & Example
-    * [SimpleExample Simple Example]
-    * [AdvancedTutorial Advanced Tutorial]
