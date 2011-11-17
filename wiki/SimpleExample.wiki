@@ -9,7 +9,9 @@
  # Open the software's root folder.
  # Copy <b>Launcher.jar</b> and <b>PatchDownloader.jar</b> into it.
  # Create a new folder named <b>update</b> and a file named <b>client.xml</b>.
- # Put the following content into <b>client.xml</b>. {{{<root>
+ # Put the following content into <b>client.xml</b>.
+{{{
+<root>
   <version>{software version}</version>
   <storage-path>update/</storage-path>
   <launch>
@@ -19,7 +21,8 @@
   <catalog>
     <url>{HTTP URL to the catalog}</url>
   </catalog>
-</root>}}}
+</root>
+}}}
  # Execute the <b>Launcher.jar</b> to see if it can launch your software correctly or not.
 
 ===Common Questions===
@@ -29,7 +32,9 @@
 ==Create patches==
  # Find the build.jar and execute {{{java -jar build.jar -patch $oldVersionFolder $newVersionFolder --from $currentVersionNumber --to $newVersionNumber --output upgrade.patch}}}
  # Get the SHA256 checksum of the file: {{{java -jar build.jar -sha256 upgrade.patch -o checksum.txt}}}
- # Create a file named <b>catalog.xml</b> and put the following content into it: {{{<patches>
+ # Create a file named <b>catalog.xml</b> and put the following content into it:
+{{{
+<patches>
   <patch id="1">
     <version>
       <from>{old version number}</from>
@@ -41,7 +46,8 @@
       <length>{size of the patch (in byte)}</length>
     </download>
   </patch>
-</patches>}}}
+</patches>
+}}}
  # Upload the <b>catalog.xml</b> and <b>upgrade.patch</b> to your web hosting.
 
 ===Common Questions===
