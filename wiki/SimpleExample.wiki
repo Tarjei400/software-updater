@@ -1,0 +1,53 @@
+=Simple Example=
+
+<wiki:toc max_depth="3" />
+
+==Preparation==
+ # Download the software updater from <a>here</a>.
+
+==Add the updater to the software==
+ # Open the software's root folder.
+ # Copy <b>Launcher.jar</b> and <b>PatchDownloader.jar</b> into it.
+ # Create a new folder named <b>update</b> and a file named <b>client.xml</b>.
+ # Put the following content into <b>client.xml</b>. {{{<root>
+  <version>{software version}</version>
+  <storage-path>update/</storage-path>
+  <launch>
+    <type>command</type>
+    <command>{path to executable}</command>
+  </launch>
+  <catalog>
+    <url>{HTTP URL to the catalog}</url>
+  </catalog>
+</root>}}}
+ # Execute the <b>Launcher.jar</b> to see if it can launch your software correctly or not.
+
+===Common Questions===
+ * How do I launch <b>jar</b> instead of <b>executable</b>?
+ * How do I use it with Java executable wrapper ([http://launch4j.sourceforge.net/ launch4j], [http://jsmooth.sourceforge.net/ JSmooth] etc.)?
+
+==Create patches==
+ # Find the build.jar and execute {{{java -jar build.jar -patch $oldVersionFolder $newVersionFolder --from $currentVersionNumber --to $newVersionNumber --output upgrade.patch}}}
+ # Get the SHA256 checksum of the file: {{{java -jar build.jar -sha256 upgrade.patch -o checksum.txt}}}
+ # Create a file named <b>catalog.xml</b> and put the following content into it: {{{<patches>
+  <patch id="1">
+    <version>
+      <from>{old version number}</from>
+      <to>{new version number}</to>
+    </version>
+    <download>
+      <url>{HTTP URL to the patch}</url>
+      <checksum>{checksum of the patch from checksum.txt}</checksum>
+      <length>{size of the patch (in byte)}</length>
+    </download>
+  </patch>
+</patches>}}}
+ # Upload the <b>catalog.xml</b> and <b>upgrade.patch</b> to your web hosting.
+
+===Common Questions===
+ * How do I add more patches for other versions?
+ * I don't want the client to launch it manually, how can I integrate it into the software?
+
+==Client update the software==
+ # Execute the <b>PatchDownloader.jar</b> to download the patch.
+ # After the downloads completed, execute the <b>Launcher.jar</b> to update the software.

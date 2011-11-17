@@ -1,0 +1,13 @@
+=Technical Details=
+
+<wiki:toc max_depth="3" />
+
+==Patch==
+ * Encryption: [http://home.comcast.net/~jwatne/aes.html AES-256] (optional)
+ * Compression: [http://tukaani.org/xz/java.html LZMA 2] (LZMA is used by 7-Zip)
+ * Diff: [http://xdelta.org/ XDelta] (Java port by [http://sourceforge.net/projects/javaxdelta/ javaxdelta])
+ * Checksum: SHA-256
+
+==Catalog==
+ * Authentication & Encryption: RSA (optional)
+ * Compression: GZip (optional)
