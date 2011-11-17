@@ -3,7 +3,7 @@
 <wiki:toc max_depth="3" />
 
 ==Preparation==
- # Download the software updater from <a>here</a>.
+ # Download the software updater from [http://code.google.com/p/software-updater/downloads here].
 
 ==Add the updater to the software==
  # Open the software's root folder.
