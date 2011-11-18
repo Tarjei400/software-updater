@@ -36,7 +36,7 @@ You can use <b>{java}</b> instead the path to the Java binary, we will replace <
 No matter you use <b>wrap</b> (include the jar in the exe) or <b>launch only</b> (jar store separately with exe), you can change your jar to the launcher. We will load your jar instead of launching your jar in separate process (if launch-type is <b>jar</b>).
 
 ===What if the command parameter contains space?===
-We accept multiple command in sequence, we will pass those commands to [http://download.oracle.com/javase/6/docs/api/java/lang/ProcessBuilder.html ProcessBuilder] to cater the quoting on different OS, e.g.:
+We accept multiple commands in sequence, we will pass those commands to [http://download.oracle.com/javase/6/docs/api/java/lang/ProcessBuilder.html ProcessBuilder] to cater the quoting on different OS, e.g.:
 {{{
 <root>
   ...
@@ -112,8 +112,8 @@ The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder<
 
 See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and here].
 
-===I don't want the client to launch the downloader it manually, how can I integrate it into the software?===
-You can, in your software, launch the downloader using command prompt (terminal); or you can include the downloader in your class path, then execute the functions, see [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/downloader/package-summary.html updater.downloader].
+===I don't want the client to launch the downloader manually, how do I integrate it into the software?===
+You can, in your software, launch the downloader using command prompt (terminal); or you can include the downloader in your class path, then invoke the functions, see [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/downloader/package-summary.html updater.downloader].
 
 ==Builder==
 
@@ -155,7 +155,7 @@ then edit the <b>catalog.xml</b> and add
 {{{
 <patches>
   ...
-  <patch id="2">
+  <patch id="3">
     <version>
       <from-subsequent>1.0</from-subsequent>
       <to>2.0</to>
@@ -182,7 +182,7 @@ When creating patch, you have to add the following at the end of the command:
 {{{
 --key AES.xml
 }}}
-In <b>catalog.xml</b>, you have to include the cipher key and IV for that patch:
+In <b>catalog.xml</b>, you have to include the cipher key and initial vector (IV) for that patch:
 {{{
 <patches>
   ...
@@ -207,7 +207,7 @@ java -jar build.jar -renew AES.xml
 
 ==Other==
 ===Any limitation for the version number?===
-Yes, there is, currently accept only [0-9]+(\.[0-9]+)*, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
+Yes, there is, currently accept only [0-9]+(\.[0-9]+)\*, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
 
 ===How do I change the title and icon of the window of launcher and downloader?===
 Edit the <b>client.xml</b>, add the following:
