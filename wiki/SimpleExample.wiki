@@ -3,7 +3,7 @@
 <wiki:toc max_depth="3" />
 
 ==Video==
-<wiki:video url="http://www.youtube.com/watch?v=L0ogBXk1iIw"/>
+<wiki:video url="http://www.youtube.com/watch?v=RAwjiZDN6rw"/>
 
 ==Preparation==
  # Download the software updater from [http://code.google.com/p/software-updater/downloads here].
