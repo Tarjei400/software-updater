@@ -5,7 +5,7 @@
 ==Launcher==
 
 ===How do I launch jar instead of executable?===
-Update the <b>client.xml</b>, change the launch type to 'jar', specify the path to the jar and the main class to launch, e.g.:
+Update the <b>client.xml</b>, change the launch type to <b>jar</b>, specify the path to the jar and the main class to launch, e.g.:
 {{{
 <root>
   ...
@@ -33,7 +33,7 @@ Besides this, you can also launch the jar by command, e.g.:
 You can use <b>{java}</b> instead the path to the Java binary, we will replace <b>{java}</b> by the path of the Java binary for you.
 
 ===How do I use it with Java executable wrapper (launch4j, JSmooth etc.)?===
-No matter you use <b>wrap</b> (include the jar in the exe) or <b>launch only</b> (jar store separately with exe), you can change your jar to the launcher. We will load your jar instead of launching your jar in separate process (if launch-type is 'jar').
+No matter you use <b>wrap</b> (include the jar in the exe) or <b>launch only</b> (jar store separately with exe), you can change your jar to the launcher. We will load your jar instead of launching your jar in separate process (if launch-type is <b>jar</b>).
 
 ===What if the command parameter contains space?===
 We accept multiple command in sequence, we will pass those commands to [http://download.oracle.com/javase/6/docs/api/java/lang/ProcessBuilder.html ProcessBuilder] to cater the quoting on different OS, e.g.:
@@ -78,7 +78,7 @@ The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder<
 ...
 }}}
 
-See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and_downloader? here].
+See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and here].
 
 ==Downloader==
 
@@ -110,17 +110,105 @@ The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder<
 ...
 }}}
 
-See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and_downloader? here].
+See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and here].
 
+===I don't want the client to launch the downloader it manually, how can I integrate it into the software?===
+You can, in your software, launch the downloader using command prompt (terminal); or you can include the downloader in your class path, then execute the functions, see [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/downloader/package-summary.html updater.downloader].
 
 ==Builder==
 
 ===How do I add more patches for other versions?===
+In the <b>catalog.xml</b>, every patches has its own <b><patch></b> tag, each with different <b>id</b>. For example, we have a patch to upgrade from <b>1.0</b> to <b>1.1</b> and a patch to upgrade from <b>1.1</b> to <b>1.2</b>:
+{{{
+<patches>
+  <patch id="1">
+    <version>
+      <from>1.0</from>
+      <to>1.1</to>
+    </version>
+    <download>
+      <url>http://localhost/1.0_1.1.patch</url>
+      <checksum>cb6eae9222be257ea73c0a9ad1548ac56fcc9c2bf07b5616efe689c075f5b7ae</checksum>
+      <length>48221152</length>
+    </download>
+  </patch>
+  <patch id="2">
+    <version>
+      <from>1.1</from>
+      <to>1.2</to>
+    </version>
+    <download>
+      <url>http://localhost/1.1_1.2.patch</url>
+      <checksum>78e88c8e98dcec995247475449a45dee1bda3a5313c8c07d7c62d804acb8d1fa</checksum>
+      <length>4620314</length>
+    </download>
+  </patch>
+</patches>
+}}}
+Normally you do not need to create the patch from <b>1.0</b> to <b>1.2</b>, the downloader can determine <b>the shortest path</b> (in download size) and download <b>1.0_1.1.patch</b> and <b>1.1_1.2.patch</b> to upgrade the software from 1.0 to 1.2.
 
-===I don't want the client to launch it manually, how can I integrate it into the software?===
+Besides creating from version to version, we support to create a full pack of specific version to allow any version to upgrade to it. For example, now we have version 2.0, we create a full pack for it:
+{{{
+java -jar build.jar -full $softwareFolder --output --from-subsequent 1.0 --to 2.0 --output +1.0_2.0.patch
+}}}
+then edit the <b>catalog.xml</b> and add
+{{{
+<patches>
+  ...
+  <patch id="2">
+    <version>
+      <from-subsequent>1.0</from-subsequent>
+      <to>2.0</to>
+    </version>
+    <download>
+      <url>http://localhost/+1.0_2.0.patch</url>
+      <checksum>21a57f2fe765e1ae4a8bf15d73fc1bf2a533f547f2343d12a499d9c0592044d4</checksum>
+      <length>32578433</length>
+    </download>
+  </patch>
+  ...
+</patches>
+}}}
+Then, those software with version higher than or equal to 1.0 will consider this patch (if there is a patch available from 1.1 to 2.0, the downloader will compare the download size to determine which patch(es) to download.)
 
+p.s. Besides <b>--from-subsequent</b>, you can also use back the <b>--from</b>.
+
+===How do I encrypt the patch?===
+Currently we only accept AES-256. To do this, first we need to create an AES key first:
+{{{
+java -jar build.jar -genkey AES 256 --output AES.xml
+}}}
+When creating patch, you have to add the following at the end of the command:
+{{{
+--key AES.xml
+}}}
+In <b>catalog.xml</b>, you have to include the cipher key and IV for that patch:
+{{{
+<patches>
+  ...
+  <patch id="X">
+    ...
+    <download>
+      ...
+      <encryption>
+        <type>AES</type>
+        <key>{copy the key from AES.xml}</key>
+        <IV>{copy the IV from AES.xml}</IV>
+      </encryption>
+    </download>
+  </patch>
+</patches>
+}}}
+
+After use, you have to renew the initial vector (IV) of the <b>AES.xml</b> by:
+{{{
+java -jar build.jar -renew AES.xml
+}}}
 
 ==Other==
+===Any limitation for the version number?===
+Yes, there is, currently accept only [0-9]+(\.[0-9]+)*, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
+
 ===How do I change the title and icon of the window of launcher and downloader?===
 Edit the <b>client.xml</b>, add the following:
 {{{
@@ -148,3 +236,31 @@ The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder<
       </icon>
 ...
 }}}
+
+===How do I do authentication on catalog.xml?===
+Currently we only accept RSA. To do this, first we need to create an RSA key first:
+{{{
+java -jar build.jar -genkey RSA 512 --output RSA.xml
+}}}
+Then we encrypt the catalog by:
+{{{
+java -jar build.jar -catalog e catalog.xml --key RSA.xml --output catalog_encrypted.xml
+}}}
+In <b>client.xml</b>, you have to include the modulus and public exponent:
+{{{
+<root>
+  ...
+  <catalog>
+    ...
+    <public-key>
+      <modulus>0080ac742891f8ba0d59dcc96b464e2245e53a9b29f8219aa0b683ad10007247ced6d74b7bef2a6b0555ec22735827b2b9dfe94664d492a723ad78d6d97d1c9b19ade1225edc060eaced684436ce221659c7e8320bc2bf5ddcdbe6751b0f476066437ccc50ea0e5afafb6a59581df509145d34aa4d0541f500f09868686f5681a509bf58feda73b35326f816b60205550783d628e5e61b24e37198349e416f09ef7579f6f25b5725d54df44017e256b1c7060f0c5ba5f3dd162e26fc5fbfcf4294ee261124737b1cdc3024dc2be62c8ebd89c8766bfaf3606a9e7aefa4fd41758498441fe69a967005c66df3ac0551d7b04910c6a9fa272aa6d081defbc2db174f</modulus>
+      <exponent>010001</exponent>
+    </public-key>
+  </catalog>
+</root>
+}}}
+Copy the public-exponent to the <b><exponent></b> field.
+
+* Please be noticed that this key should be pre-distributed.
+
+Now you can upload the encrypted catalog to the web hosting.

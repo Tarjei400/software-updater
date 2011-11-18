@@ -29,8 +29,8 @@
  # Execute the <b>Launcher.jar</b> to see if it can launch your software correctly or not.
 
 ===Common Questions===
- * How do I launch <b>jar</b> instead of <b>executable</b>?
- * How do I use it with Java executable wrapper ([http://launch4j.sourceforge.net/ launch4j], [http://jsmooth.sourceforge.net/ JSmooth] etc.)?
+ * [AdvancedTutorial#How_do_I_launch_jar_instead_of_executable? How do I launch jar instead of executable?]
+ * [AdvancedTutorial#How_do_I_use_it_with_Java_executable_wrapper_(launch4j,_JSmooth How do I use it with Java executable wrapper launch4j, JSmooth etc.)?]
 
 ==Create patches==
  # Find the build.jar and execute {{{java -jar build.jar -patch $oldVersionFolder $newVersionFolder --from $currentVersionNumber --to $newVersionNumber --output upgrade.patch}}}
@@ -54,8 +54,8 @@
  # Upload the <b>catalog.xml</b> and <b>upgrade.patch</b> to your web hosting.
 
 ===Common Questions===
- * How do I add more patches for other versions?
- * I don't want the client to launch it manually, how can I integrate it into the software?
+ * [AdvancedTutorial#How_do_I_add_more_patches_for_other_versions? How do I add more patches for other versions?]
+ * [AdvancedTutorial#I_don't_want_the_client_to_launch_it_manually,_how_can_I_in I don't want the client to launch it manually, how can I integrate it into the software?]
 
 ==Client update the software==
  # Execute the <b>PatchDownloader.jar</b> to download the patch.
