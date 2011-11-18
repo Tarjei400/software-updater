@@ -2,12 +2,6 @@
   * [SimpleExample Simple Example]
   * [AdvancedTutorial Advanced Tutorial]
   * [TechnicalDetails Technical Details]
-  * Flow Details
-    * [GeneralFlow General Flow]
-    * [LauncherFlow Launcher Flow]
-    * [DownloaderFlow Downloader Flow]
-  * Script Format
-    * [ClientScript Client Script]
-    * [CatalogScript Catalog Script]
-    * [PatchScript Patch Script]
-  * [PatchFormat Patch Format]
+  * [GeneralFlow General Flow]
+  * [LauncherFlow Launcher Flow]
+  * [DownloaderFlow Downloader Flow]
