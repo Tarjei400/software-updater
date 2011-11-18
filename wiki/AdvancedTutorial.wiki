@@ -1,0 +1,150 @@
+=Advanced Tutorial=
+
+<wiki:toc max_depth="3" />
+
+==Launcher==
+
+===How do I launch jar instead of executable?===
+Update the <b>client.xml</b>, change the launch type to 'jar', specify the path to the jar and the main class to launch, e.g.:
+{{{
+<root>
+  ...
+  <launch>
+    <type>jar</type>
+    <jar-path>LanguageFilesTool.jar</jar-path>
+    <main-class>langfiles.Main</main-class>
+  </launch>
+  ...
+</root>
+}}}
+By using this method, the launcher will load the jar by class loader and invoke the main method of specified main-class.
+
+Besides this, you can also launch the jar by command, e.g.:
+{{{
+<root>
+  ...
+  <launch>
+    <type>command</type>
+    <command>{java} -jar LanguageFilesTool.jar</command>
+  </launch>
+  ...
+</root>
+}}}
+You can use <b>{java}</b> instead the path to the Java binary, we will replace <b>{java}</b> by the path of the Java binary for you.
+
+===How do I use it with Java executable wrapper (launch4j, JSmooth etc.)?===
+No matter you use <b>wrap</b> (include the jar in the exe) or <b>launch only</b> (jar store separately with exe), you can change your jar to the launcher. We will load your jar instead of launching your jar in separate process (if launch-type is 'jar').
+
+===What if the command parameter contains space?===
+We accept multiple command in sequence, we will pass those commands to [http://download.oracle.com/javase/6/docs/api/java/lang/ProcessBuilder.html ProcessBuilder] to cater the quoting on different OS, e.g.:
+{{{
+<root>
+  ...
+  <launch>
+    <type>command</type>
+    <command>{java}</command>
+    <command>-jar</command>
+    <command>C:\My Software\main.jar</command>
+  </launch>
+  ...
+</root>
+}}}
+
+===How do I change the titles and icons of the launcher?===
+Edit the <b>client.xml</b>, add the following:
+{{{
+<root>
+  ...
+  <information>
+    ...
+    <launcher>
+      <name>Software Updater</name>
+      <icon>
+        <location>folder</location>
+        <path>updater_icon.png</path>
+      </icon>
+    </launcher>
+  </information>
+  ...
+</root>
+}}}
+The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder</b>, you have to place the image in the folder; if it is <b>jar</b>, you have to place the image inside the jar and give the resource path, e.g.:
+{{{
+...
+      <icon>
+        <location>jar</location>
+        <path>/updater/img/updater_icon.png</path>
+      </icon>
+...
+}}}
+
+See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and_downloader? here].
+
+==Downloader==
+
+===How do I change the titles and icons of the downloader?===
+Edit the <b>client.xml</b>, add the following:
+{{{
+<root>
+  ...
+  <information>
+    ...
+    <downloader>
+      <name>Patches Downloader</name>
+      <icon>
+        <location>folder</location>
+        <path>updater_icon.png</path>
+      </icon>
+    </downloader>
+  </information>
+  ...
+</root>
+}}}
+The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder</b>, you have to place the image in the folder; if it is <b>jar</b>, you have to place the image inside the jar and give the resource path, e.g.:
+{{{
+...
+      <icon>
+        <location>jar</location>
+        <path>/updater/img/updater_icon.png</path>
+      </icon>
+...
+}}}
+
+See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and_downloader? here].
+
+
+==Builder==
+
+===How do I add more patches for other versions?===
+
+===I don't want the client to launch it manually, how can I integrate it into the software?===
+
+
+==Other==
+===How do I change the title and icon of the window of launcher and downloader?===
+Edit the <b>client.xml</b>, add the following:
+{{{
+<root>
+  ...
+  <information>
+    ...
+    <software>
+      <name>Language Files Tool</name>
+      <icon>
+        <location>folder</location>
+        <path>software_icon.png</path>
+      </icon>
+    </software>
+  </information>
+  ...
+</root>
+}}}
+The icon location can be either <b>folder</b> or <b>jar</b>. If it is <b>folder</b>, you have to place the image in the folder; if it is <b>jar</b>, you have to place the image inside the jar and give the resource path, e.g.:
+{{{
+...
+      <icon>
+        <location>jar</location>
+        <path>/updater/img/software_icon.png</path>
+      </icon>
+...
+}}}
