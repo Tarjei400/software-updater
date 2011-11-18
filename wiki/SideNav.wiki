@@ -3,4 +3,3 @@
   * [AdvancedTutorial Advanced Tutorial]
   * [FlowDetails Flow Details]
   * [TechnicalDetails Technical Details]
-  * [http://software-updater.googlecode.com/svn/trunk/javadoc/index.html JavaDoc]
