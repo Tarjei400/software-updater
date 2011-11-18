@@ -1,5 +1,6 @@
   * [Overview Overview]
   * [SimpleExample Simple Example]
   * [AdvancedTutorial Advanced Tutorial]
-  * [TechnicalDetails Technical Details]
   * [FlowDetails Flow Details]
+  * [TechnicalDetails Technical Details]
+  * [http://software-updater.googlecode.com/svn/trunk/javadoc/index.html JavaDoc]
