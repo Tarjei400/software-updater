@@ -207,7 +207,7 @@ java -jar build.jar -renew AES.xml
 
 ==Other==
 ===Any limitation for the version number?===
-Yes, there is, currently accept only [0-9]+(\.[0-9]+)\*, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
+Yes, there is, currently accept only [0-9]+(\.[0-9]+){{{*}}}, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
 
 ===How do I change the title and icon of the window of launcher and downloader?===
 Edit the <b>client.xml</b>, add the following:

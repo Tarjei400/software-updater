@@ -55,7 +55,7 @@
 
 ===Common Questions===
  * [AdvancedTutorial#How_do_I_add_more_patches_for_other_versions? How do I add more patches for other versions?]
- * [AdvancedTutorial#I_don't_want_the_client_to_launch_it_manually,_how_can_I_in I don't want the client to launch it manually, how can I integrate it into the software?]
+ * [AdvancedTutorial#I_don't_want_the_client_to_launch_the_downloader_manually, I don't want the client to launch the downloader manually, how do I integrate it into the software?]
 
 ==Client update the software==
  # Execute the <b>PatchDownloader.jar</b> to download the patch.
