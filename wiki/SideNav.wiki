@@ -1,7 +1,6 @@
   * [Overview Overview]
-  * Tutorial & Example
-    * [SimpleExample Simple Example]
-    * [AdvancedTutorial Advanced Tutorial]
+  * [SimpleExample Simple Example]
+  * [AdvancedTutorial Advanced Tutorial]
   * [TechnicalDetails Technical Details]
   * Flow Details
     * [GeneralFlow General Flow]
