@@ -2,6 +2,4 @@
   * [SimpleExample Simple Example]
   * [AdvancedTutorial Advanced Tutorial]
   * [TechnicalDetails Technical Details]
-  * [GeneralFlow General Flow]
-  * [LauncherFlow Launcher Flow]
-  * [DownloaderFlow Downloader Flow]
+  * [FlowDetails Flow Details]

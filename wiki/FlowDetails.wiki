@@ -1,0 +1,16 @@
+=Flow Details=
+
+<wiki:toc max_depth="3" />
+
+==Launcher==
+ # It will validate all existing files before doing patching.
+ # It will patch the existing files and store the patched files temporaily in the <b>update</b> folder, after all are patched, it will do replacements on all files at the same time and it should be very fast.
+ # After replacements, it will validate all files again to make sure the client has all the files that the software needs.
+ # If the update is interrupted by any means (e.g. power off), it can resume the update by reading the update progress log.
+ # It can update itself by [Overview#Self-Updater Self-Updater].
+
+==Downloader==
+ # It will use the If-Modified-Since HTTP header to check for updates from catalog.
+ # It can determine the smallest size and smallest number of patches to download to upgrade the software to highest possible version.
+ # It support break-point resume download.
+ # It will do hash and size checking on the downloaded patches.

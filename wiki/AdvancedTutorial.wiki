@@ -206,8 +206,19 @@ java -jar build.jar -renew AES.xml
 }}}
 
 ==Other==
+
+===What kind of files should not be included in the patch?===
+Because we will calculate and compare the checksum before patching the file, so those files with content possibly changed in runtime, like database, log file, must not be included in the patch.
+
 ===Any limitation for the version number?===
 Yes, there is, currently accept only [0-9]+(\.[0-9]+){{{*}}}, that is numbers separated by dot(<b>.</b>). We use it to determine which version is newer.
+
+===How to do a quick patch testing?===
+You can apply the patch to specific folder to test whether the patch works well or not. Use <b>build.jar</b> and type:
+{{{
+java -jar build.jar -do $folderToApplyThePatch $pathToPatch
+}}}
+If the patch has been encrypted, you can specify the key to use by <b>--key</b>.
 
 ===How do I change the title and icon of the window of launcher and downloader?===
 Edit the <b>client.xml</b>, add the following:
@@ -264,3 +275,12 @@ Copy the public-exponent to the <b>`<exponent>`</b> field.
 * Please be noticed that this key should be pre-distributed.
 
 Now you can upload the encrypted catalog to the web hosting.
+
+===How do I change the location or file name of client.xml?===
+The default location of <b>client.xml</b> is specified by the file stored in the jar named <b>config</b>, change the value inside can change the default location of the <b>client.xml</b>.
+
+Besides, you can pass the path to <b>client.xml</b> as the first argument to the <b>Launcher</b> and <b>PatchDownloader</b>, e.g.:
+{{{
+java -jar Launcher.jar config.xml
+}}}
+Notice that the argument after <b>Launcher.jar</b> cannot have space.
