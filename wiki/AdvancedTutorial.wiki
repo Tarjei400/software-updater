@@ -118,7 +118,7 @@ You can, in your software, launch the downloader using command prompt (terminal)
 ==Builder==
 
 ===How do I add more patches for other versions?===
-In the <b>catalog.xml</b>, every patches has its own <b><patch></b> tag, each with different <b>id</b>. For example, we have a patch to upgrade from <b>1.0</b> to <b>1.1</b> and a patch to upgrade from <b>1.1</b> to <b>1.2</b>:
+In the <b>catalog.xml</b>, every patches has its own <b>&lt;patch&gt;</b> tag, each with different <b>id</b>. For example, we have a patch to upgrade from <b>1.0</b> to <b>1.1</b> and a patch to upgrade from <b>1.1</b> to <b>1.2</b>:
 {{{
 <patches>
   <patch id="1">
@@ -259,7 +259,7 @@ In <b>client.xml</b>, you have to include the modulus and public exponent:
   </catalog>
 </root>
 }}}
-Copy the public-exponent to the <b><exponent></b> field.
+Copy the public-exponent to the <b>&lt;exponent&gt;</b> field.
 
 * Please be noticed that this key should be pre-distributed.
 
