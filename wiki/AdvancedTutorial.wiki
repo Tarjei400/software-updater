@@ -156,6 +156,7 @@ then edit the <b>catalog.xml</b> and add
 <patches>
   ...
   <patch id="3">
+    <type>full</type>
     <version>
       <from-subsequent>1.0</from-subsequent>
       <to>2.0</to>
