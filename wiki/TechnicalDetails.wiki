@@ -8,8 +8,8 @@
  * Diff: [http://xdelta.org/ XDelta] <sup>2</sup>
  * Checksum: SHA-256
 
- * [http://en.wikipedia.org/wiki/Java_Cryptography_Extension JCE] be limited to AES-128 by "Strong Jurisdiction Policy" [http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html#AppE ref1] [http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html ref2]<br />
- * Java port by [http://sourceforge.net/projects/javaxdelta/ javaxdelta]
+ # [http://en.wikipedia.org/wiki/Java_Cryptography_Extension JCE] be limited to AES-128 by "Strong Jurisdiction Policy" [http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html#AppE ref1] [http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html ref2]<br />
+ # Java port by [http://sourceforge.net/projects/javaxdelta/ javaxdelta]
 
 ==Catalog==
  * Authentication & Encryption: RSA
