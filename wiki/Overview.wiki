@@ -8,7 +8,7 @@ This software is divided into four parts. They are:
  # [Overview#Builder Builder] - create patches, update catalog etc.
  # [Overview#Launcher Launcher] - do patching and launch the software
  # [Overview#Downloader Downloader] - check and download patches from the Internet
- # [Overview#Self-Updater Self-Updater] - utility used to patch the launcher
+ # [Overview#Self_Updater Self-Updater] - utility used to patch the launcher
 
 Basically self-updater is part of the launcher so there actually contain only three parts. Launcher and downloader will be distributed accompany with your software and builder will reside in your computer. Because the downloader needs to download the patches through the Internet, so you have to prepare an Internet host space to put the patches.
 
@@ -57,16 +57,16 @@ The following are some functions for testing or for fun:
 ==Launcher==
 The launcher is responsible for applying patchs and launch the software. After executing the launcher, it will check the <a>client script</a> to see if there is any patches downloaded. If there is any, it will start patching the software and prompt a GUI showing progress and message to user. After the patching finished or actually there is no any new updates, the launcher will launcher the software.
 
-If you don't like the default GUI, you can implement one yourself. See <a>updater.gui.UpdaterWindow</a>.
+If you don't like the default GUI, you can implement one yourself. See [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/gui/UpdaterWindow.html updater.gui.UpdaterWindow].
 
-If you don't want to use the GUI, you can invoke the functions in the <a>updater.launcher.BatchPatcher</a> or <a>updater.patch</a> to apply patches.
+If you don't want to use the GUI, you can invoke the functions in the [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/launcher/BatchPatcher.html updater.launcher.BatchPatcher] or [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/patch/package-summary.html updater.patch] to apply patches.
 
 ==Downloader==
 The downloader is responsible for checking new updates and download suitable patches from the Internet. There is a default GUI provided showing the download progress, speed and estimated remaining time.
 
-If you don't like the default GUI, you can implement one yourself. See <a>updater.gui.UpdaterWindow</a>.
+If you don't like the default GUI, you can implement one yourself. See [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/gui/UpdaterWindow.html updater.gui.UpdaterWindow].
 
-If you don't want to use the GUI, you can invoke the functions in the <a>updater.download.PatcheDownloader</a> to download patchers.
+If you don't want to use the GUI, you can invoke the functions in the [http://software-updater.googlecode.com/svn/trunk/javadoc/updater/downloader/PatchDownloader.html  updater.downloader.PatcheDownloader] to download patchers.
 
 ==Self-Updater==
 This is an updater used by the launcher. The launcher will update the software by add, replace and remove files. Sometimes, we may want to update the launcher jar file. However, when we are executing the launcher to do the update, the launcher jar file will be locked by the JVM. This make updating the launcher using the launcher unworkable. This self-updater is then made to solve this problem.

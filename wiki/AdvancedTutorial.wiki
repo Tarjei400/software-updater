@@ -273,7 +273,7 @@ In <b>client.xml</b>, you have to include the modulus and public exponent:
 }}}
 Copy the public-exponent to the <b>`<exponent>`</b> field.
 
-* Please be noticed that this key should be pre-distributed.
+`*` Please be noticed that this key should be pre-distributed.
 
 Now you can upload the encrypted catalog to the web hosting.
 
