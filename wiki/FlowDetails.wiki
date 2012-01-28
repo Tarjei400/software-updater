@@ -1,18 +1,24 @@
-*<font color=red>The information below is outdated and pending for update.</font>*
-
 =Flow Details=
 
 <wiki:toc max_depth="3" />
 
+*<font color=red>Note the following is the flow of the GUI.</font>*
+
 ==Launcher==
- # It will validate all existing files before doing patching.
- # It will patch the existing files and store the patched files temporaily in the <b>update</b> folder, after all are patched, it will do replacements on all files at the same time and it should be very fast.
- # After replacements, it will validate all files again to make sure the client has all the files that the software needs.
- # If the update is interrupted by any means (e.g. power off), it can resume the update by reading the update progress log.
- # It can update itself by [Overview#3.4._Self-Updater Self-Updater].
+1. Check if there is any downloaded patches recorded in client script. If there isn't any, launch the software.
+2. Start patching. Do patching and store the patched and newly created files temporaily in the <b>update</b> folder.
+3. Do replacement/movement on all files using the files stored in the<b>update</b> folder. If there is more patches to apply, go to step 2 and do patching.
+4. If there is any file patching failed due to file locking, use the [Overview#3.4._Self-Updater Self-Updater] to do patching on those files.
+5. Validate all files to make sure the client has all the files that the software needs.
+6. Launch the software.
+
+*If the update is interrupted by any means (e.g. power off), it can resume the update by reading the update progress log.*
 
 ==Downloader==
- # It will use the If-Modified-Since HTTP header to check for updates from catalog.
- # It can determine the smallest size and smallest number of patches to download to upgrade the software to highest possible version.
- # It support break-point resume download.
- # It will do hash and size checking on the downloaded patches.
+1. Check if there is any update for the patches catalog available. If there isn't any, finish checking.
+2. Download the updated catalog.
+3. Determine the minimum size of patches to download to update the software to highest possible version. If there isn't any patch to download, finish checking.
+4. Download available patches. Determine if there is any partly downlaoded patches and do resume download.
+5. Validate the file size and checksum of the patches. If any failed, download the patch again until 5 times reached.
+6. Record the downloaded patches in the client script.
+7. Finished.
