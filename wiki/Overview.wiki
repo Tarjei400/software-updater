@@ -41,9 +41,9 @@ The Software Updater can resume patches downloading or patching process no matte
 
 ===2.5. Block unauthorized access===
 ====2.5.1. Patches Catalog====
-You can use the build tool to encrypt the catalog using pre-defined RSA private key. The public key and exponent should be pre-distributed to the client script file. For detail operation, please refer to [AdvancedTutorial Advanced Tutorial].
+You can use the build tool to encrypt the catalog using pre-defined RSA private key. The public key and exponent should be pre-distributed to the client script file. For detail operation, please refer to [AdvancedTutorial#How_do_I_do_authentication_on_catalog.xml? Advanced Tutorial].
 ====2.5.2. Patch====
-You can use the build tool to encrypt the patch using pre-defined AES key and IV and record them into the catalog. For detail operation, please refer to [AdvancedTutorial Advanced Tutorial].
+You can use the build tool to encrypt the patch using pre-defined AES key and IV and record them into the catalog. For detail operation, please refer to [AdvancedTutorial#How_do_I_encrypt_the_patch? Advanced Tutorial].
 
 ===2.6. Minimize garbage files===
 If you use the build tool to build a patch of specific version to another specific version, the updater will be able to remove no longer needed file from the software directory.
@@ -58,10 +58,10 @@ After a long time of release, we may have many software version, like 1.0, 1.1, 
 ==3. Briefing==
 
 This software is divided into four parts. They are:
- # [Overview#Builder Builder] - create patches, update catalog etc.
- # [Overview#Launcher Launcher] - do patching and launch the software
- # [Overview#Downloader Downloader] - check and download patches from the Internet
- # [Overview#Self_Updater Self-Updater] - utility used to patch the launcher
+ # [Overview#3.1._Builder Builder] - create patches, update catalog etc.
+ # [Overview#3.2._Launcher Launcher] - do patching and launch the software
+ # [Overview#3.3._Downloader Downloader] - check and download patches from the Internet
+ # [Overview#3.4._Self-Updater Self-Updater] - utility used to patch the launcher
 
 Basically self-updater is part of the launcher so there actually contain only three parts. Launcher and downloader will be distributed accompany with your software and builder will reside in your computer. Because the downloader needs to download the patches through the Internet, so you have to prepare an Internet host space to put the patches.
 
@@ -123,6 +123,8 @@ If you don't want to use the GUI, you can invoke the functions in the [http://so
 
 ===3.4. Self-Updater===
 This is an updater used by the launcher. The launcher will update the software by add, replace and remove files. Sometimes, we may want to update the launcher jar file. However, when we are executing the launcher to do the update, the launcher jar file may be locked by the JVM. This make updating the launcher using the launcher unworkable. This self-updater is then made to solve this problem.
+
+[SelfUpdater Click here to know more about Self-Updater.]
 
 ==4. Usage Example==
 Before reading more deep inside, let's have a 6 minutes video step-by-step example first.
