@@ -5,19 +5,19 @@
 *<font color=red>Note the following is the flow of the GUI.</font>*
 
 ==Launcher==
- # Check if there is any downloaded patches recorded in client script. If there isn't any, launch the software.
+ # Check if there is any downloaded patches recorded in client script. If there isn't any, go to step 6.
  # Start patching. Do patching and store the patched and newly created files temporaily in the *update* folder.
  # Do replacement/movement on all files using the files stored in the *update* folder. If there is more patches to apply, go to step 2 and do patching.
  # If there is any file patching failed due to file locking, use the [Overview#3.4._Self-Updater Self-Updater] to do patching on those files.
  # Validate all files to make sure the client has all the files that the software needs.
  # Launch the software.
 
-*If the update is interrupted by any means (e.g. power off), it can resume the update by reading the update progress log.*
+(If the update is interrupted by any means (e.g. power off), it can resume the update by reading the update progress log.)
 
 ==Downloader==
- # Check if there is any update for the patches catalog available. If there isn't any, finish checking.
+ # Check if there is any update for the patches catalog available. If there isn't any, go to step 7.
  # Download the updated catalog.
- # Determine the minimum size of patches to download to update the software to highest possible version. If there isn't any patch to download, finish checking.
+ # Determine the minimum size of patches to download to update the software to highest possible version. If there isn't any patch to download, go to step 7.
  # Download available patches. Determine if there is any partly downlaoded patches and do resume download.
  # Validate the file size and checksum of the patches. If any failed, download the patch again until 5 times reached.
  # Record the downloaded patches in the client script.
