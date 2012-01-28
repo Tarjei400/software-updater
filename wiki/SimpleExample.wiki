@@ -2,13 +2,16 @@
 
 <wiki:toc max_depth="3" />
 
+==Introduction==
+In this example, we are going integrate the Software Updater into [http://www.sweethome3d.com Sweet Home 3D] and make a patch from version 3.2 to 3.3.
+
 ==Video==
 <wiki:video url="http://www.youtube.com/watch?v=RAwjiZDN6rw"/>
 
 ==Preparation==
  # Download the software updater from [http://code.google.com/p/software-updater/downloads here].
 
-==Add the updater to the software==
+==Integrate the updater to the software==
  # Open the software's root folder.
  # Copy <b>Launcher.jar</b> and <b>PatchDownloader.jar</b> into it.
  # Create a new folder named <b>update</b> and a file named <b>client.xml</b>.
@@ -56,8 +59,10 @@
 
 ===Common Questions===
  * [AdvancedTutorial#How_do_I_add_more_patches_for_other_versions? How do I add more patches for other versions?]
- * [AdvancedTutorial#I_don't_want_the_client_to_launch_the_downloader_manually, I don't want the client to launch the downloader manually, how do I integrate it into the software?]
 
 ==Client update the software==
  # Execute the <b>PatchDownloader.jar</b> to download the patch.
- # After the downloads completed, execute the <b>Launcher.jar</b> to update the software.
+ # After the downloads completed, execute the <b>Launcher.jar</b> to update and launch the software.
+
+===Common Questions===
+ * [AdvancedTutorial#I_don't_want_the_client_to_launch_the_downloader_manually, I don't want the client to launch the downloader manually, how do I integrate it into the software?]
