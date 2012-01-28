@@ -1,3 +1,5 @@
+*<font color=red>A more detail document will be available after the end of beta release.</font>*
+
 =Overview=
 
 <wiki:toc max_depth="4" />
