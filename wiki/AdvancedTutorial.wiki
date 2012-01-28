@@ -5,7 +5,7 @@
 ==Launcher==
 
 ===How do I launch jar instead of executable?===
-Update the *client.xml*, change the launch type to *jar*, specify the path to the jar and the main class to launch, e.g.:
+Update the [ClientSettings client.xml], change the launch type to *jar*, specify the path to the jar and the main class to launch, e.g.:
 {{{
 <root>
   ...
@@ -51,7 +51,7 @@ We accept multiple commands in sequence, we will pass those commands to [http://
 }}}
 
 ===How do I change the titles and icons of the launcher?===
-Edit the *client.xml*, add the following:
+Edit the [ClientSettings client.xml], add the following:
 {{{
 <root>
   ...
@@ -83,7 +83,7 @@ See also [#How_do_I_change_the_title_and_icon_of_the_window_of_launcher_and here
 ==Downloader==
 
 ===How do I change the titles and icons of the downloader?===
-Edit the *client.xml*, add the following:
+Edit the [ClientSettings client.xml], add the following:
 {{{
 <root>
   ...
@@ -118,7 +118,7 @@ You can, in your software, launch the downloader using command prompt (terminal)
 ==Builder==
 
 ===How do I add more patches for other versions?===
-In the *catalog.xml*, every patches has its own *`<patch>`* tag, each with different *id*. For example, we have a patch to upgrade from *1.0* to *1.1* and a patch to upgrade from *1.1* to *1.2*:
+In the [PatchesCatalog catalog.xml], every patches has its own *`<patch>`* tag, each with different *id*. For example, we have a patch to upgrade from *1.0* to *1.1* and a patch to upgrade from *1.1* to *1.2*:
 {{{
 <patches>
   <patch id="1">
@@ -151,7 +151,7 @@ Besides creating from version to version, we support to create a full pack of sp
 {{{
 java -jar build.jar -full $softwareFolder --output --from-subsequent 1.0 --to 2.0 --output +1.0_2.0.patch
 }}}
-then edit the *catalog.xml* and add
+then edit the [PatchesCatalog catalog.xml] and add
 {{{
 <patches>
   ...
@@ -183,7 +183,7 @@ When creating patch, you have to add the following at the end of the command:
 {{{
 --key AES.xml
 }}}
-In *catalog.xml*, you have to include the cipher key and initial vector (IV) for that patch:
+In [PatchesCatalog catalog.xml], you have to include the cipher key and initial vector (IV) for that patch:
 {{{
 <patches>
   ...
@@ -222,7 +222,7 @@ java -jar build.jar -do $folderToApplyThePatch $pathToPatch
 If the patch has been encrypted, you can specify the key to use by *--key*.
 
 ===How do I change the title and icon of the window of launcher and downloader?===
-Edit the *client.xml*, add the following:
+Edit the [ClientSettings client.xml], add the following:
 {{{
 <root>
   ...
@@ -254,11 +254,11 @@ Currently we only accept RSA. To do this, first we need to create an RSA key fir
 {{{
 java -jar build.jar -genkey RSA 512 --output RSA.xml
 }}}
-Then we encrypt the catalog by:
+Then we encrypt the [PatchesCatalog catalog] by:
 {{{
 java -jar build.jar -catalog e catalog.xml --key RSA.xml --output catalog_encrypted.xml
 }}}
-In *client.xml*, you have to include the modulus and public exponent:
+In [ClientSettings client.xml], you have to include the modulus and public exponent:
 {{{
 <root>
   ...
@@ -275,12 +275,12 @@ Copy the public-exponent to the *`<exponent>`* field.
 
 `*` Please be noticed that this key should be pre-distributed.
 
-Now you can upload the encrypted catalog to the web hosting.
+Now you can upload the encrypted [PatchesCatalog catalog] to the web hosting.
 
 ===How do I change the location or file name of client.xml?===
-The default location of *client.xml* is specified by the file stored in the jar named *config*, change the value inside can change the default location of the *client.xml*.
+The default location of [ClientSettings client.xml] is specified by the file stored in the jar named *config*, change the value inside can change the default location of the [ClientSettings client.xml].
 
-Besides, you can pass the path to *client.xml* as the first argument to the *Launcher* and *PatchDownloader*, e.g.:
+Besides, you can pass the path to [ClientSettings client.xml] as the first argument to the *Launcher* and *PatchDownloader*, e.g.:
 {{{
 java -jar Launcher.jar config.xml
 }}}

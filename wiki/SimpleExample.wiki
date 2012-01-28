@@ -14,8 +14,8 @@ In this example, we are going integrate the Software Updater into [http://www.sw
 ==Integrate the updater to the software==
  # Open the software's root folder.
  # Copy *Launcher.jar* and *PatchDownloader.jar* into it.
- # Create a new folder named *update* and a file named *client.xml*.
- # Put the following content into *client.xml*.
+ # Create a new folder named *update* and a file named [ClientSettings client.xml].
+ # Put the following content into [ClientSettings client.xml].
 {{{
 <root>
   <version>{software version}</version>
@@ -36,10 +36,10 @@ In this example, we are going integrate the Software Updater into [http://www.sw
  * [AdvancedTutorial#How_do_I_use_it_with_Java_executable_wrapper_(launch4j,_JSmooth How do I use it with Java executable wrapper launch4j, JSmooth etc.)?]
 
 ==Create patches==
- # Move the *client.xml* out from the software folder first, see [AdvancedTutorial#What_kind_of_files_should_not_be_included_in_the_patch? here] for reason.
+ # Move the [ClientSettings client.xml] out from the software folder first, see [AdvancedTutorial#What_kind_of_files_should_not_be_included_in_the_patch? here] for reason.
  # Find the build.jar and execute {{{java -jar build.jar -patch $oldVersionFolder $newVersionFolder --from $currentVersionNumber --to $newVersionNumber --output upgrade.patch}}}
  # Get the SHA256 checksum of the file: {{{java -jar build.jar -sha256 upgrade.patch -o checksum.txt}}}
- # Create a file named *catalog.xml* and put the following content into it:
+ # Create a file named [PatchesCatalog catalog.xml] and put the following content into it:
 {{{
 <patches>
   <patch id="1">
@@ -55,7 +55,7 @@ In this example, we are going integrate the Software Updater into [http://www.sw
   </patch>
 </patches>
 }}}
- # Upload the *catalog.xml* and *upgrade.patch* to your web hosting.
+ # Upload the [PatchesCatalog catalog.xml] and *upgrade.patch* to your web hosting.
 
 ===Common Questions===
  * [AdvancedTutorial#How_do_I_add_more_patches_for_other_versions? How do I add more patches for other versions?]
