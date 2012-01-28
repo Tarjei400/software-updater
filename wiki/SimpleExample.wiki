@@ -13,9 +13,9 @@ In this example, we are going integrate the Software Updater into [http://www.sw
 
 ==Integrate the updater to the software==
  # Open the software's root folder.
- # Copy <b>Launcher.jar</b> and <b>PatchDownloader.jar</b> into it.
- # Create a new folder named <b>update</b> and a file named <b>client.xml</b>.
- # Put the following content into <b>client.xml</b>.
+ # Copy *Launcher.jar* and *PatchDownloader.jar* into it.
+ # Create a new folder named *update* and a file named *client.xml*.
+ # Put the following content into *client.xml*.
 {{{
 <root>
   <version>{software version}</version>
@@ -29,17 +29,17 @@ In this example, we are going integrate the Software Updater into [http://www.sw
   </catalog>
 </root>
 }}}
- # Execute the <b>Launcher.jar</b> to see if it can launch your software correctly or not.
+ # Execute the *Launcher.jar* to see if it can launch your software correctly or not.
 
 ===Common Questions===
  * [AdvancedTutorial#How_do_I_launch_jar_instead_of_executable? How do I launch jar instead of executable?]
  * [AdvancedTutorial#How_do_I_use_it_with_Java_executable_wrapper_(launch4j,_JSmooth How do I use it with Java executable wrapper launch4j, JSmooth etc.)?]
 
 ==Create patches==
- # Move the <b>client.xml</b> out from the software folder first, see [AdvancedTutorial#What_kind_of_files_should_not_be_included_in_the_patch? here] for reason.
+ # Move the *client.xml* out from the software folder first, see [AdvancedTutorial#What_kind_of_files_should_not_be_included_in_the_patch? here] for reason.
  # Find the build.jar and execute {{{java -jar build.jar -patch $oldVersionFolder $newVersionFolder --from $currentVersionNumber --to $newVersionNumber --output upgrade.patch}}}
  # Get the SHA256 checksum of the file: {{{java -jar build.jar -sha256 upgrade.patch -o checksum.txt}}}
- # Create a file named <b>catalog.xml</b> and put the following content into it:
+ # Create a file named *catalog.xml* and put the following content into it:
 {{{
 <patches>
   <patch id="1">
@@ -55,14 +55,14 @@ In this example, we are going integrate the Software Updater into [http://www.sw
   </patch>
 </patches>
 }}}
- # Upload the <b>catalog.xml</b> and <b>upgrade.patch</b> to your web hosting.
+ # Upload the *catalog.xml* and *upgrade.patch* to your web hosting.
 
 ===Common Questions===
  * [AdvancedTutorial#How_do_I_add_more_patches_for_other_versions? How do I add more patches for other versions?]
 
 ==Client update the software==
- # Execute the <b>PatchDownloader.jar</b> to download the patch.
- # After the downloads completed, execute the <b>Launcher.jar</b> to update and launch the software.
+ # Execute the *PatchDownloader.jar* to download the patch.
+ # After the downloads completed, execute the *Launcher.jar* to update and launch the software.
 
 ===Common Questions===
  * [AdvancedTutorial#I_don't_want_the_client_to_launch_the_downloader_manually, I don't want the client to launch the downloader manually, how do I integrate it into the software?]

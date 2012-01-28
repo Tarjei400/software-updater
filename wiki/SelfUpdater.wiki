@@ -10,9 +10,9 @@ The launcher will launch this and exit (to release the file lock on the itself),
 {{{
 java -jar SelfUpdater.jar {lock file} {replacement file} {launch command}
 }}}
- * <b>{lock file}</b> is the path to the lock file
- * <b>{replacement file}</b> is the path of text file that contain the replacement information, see [#Replacement_File here]
- * <b>{launch command}</b> is the command to use to start the Launcher, it contain JVM arguments and run arguments (can take up more than one argument)
+ * *{lock file}* is the path to the lock file
+ * *{replacement file}* is the path of text file that contain the replacement information, see [#Replacement_File here]
+ * *{launch command}* is the command to use to start the Launcher, it contain JVM arguments and run arguments (can take up more than one argument)
 
 ==Flow==
  # Acquire update lock
